@@ -1,7 +1,7 @@
-#! /bin/sh
+#!/bin/sh
 
 #====================================================================
-# Start/stop script for OpenLDAP 2.2.x and 2.3.x
+# Start/stop script for OpenLDAP (2.2 minimum)
 # (http://www.openldap.org).
 # Use BerkeleyDB utilities and save data in LDIF format.
 #
@@ -14,7 +14,7 @@
 # Copyright (C) 2005 Sebastien BAHLOUL 
 # Copyright (C) 2005 Raphael OUAZANA 
 # Copyright (C) 2005 Clement OUDOT
-# Copyright (C) 2005 LINAGORA
+# Copyright (C) 2009 LTB-project.org
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License
@@ -29,12 +29,14 @@
 # GPL License: http://www.gnu.org/licenses/gpl.txt
 #
 #====================================================================
-# More contributions on http://www.linagora.org
-#====================================================================
 
 #====================================================================
 # Changelog
 #====================================================================
+# Version 0.7 (06/2009):
+# - SSLIP parameter
+# Author: Clement OUDOT (LTB-project)
+#
 # Version 0.6.5 (07/2008):
 # - renamed $UID and $GID to $MYUID and $MYGID to enable bash compatibility
 # since $UID is read-only in bash
@@ -100,6 +102,7 @@
 #====================================================================
 # IP and port to listen (use wildcard * in IP to listen on all interfaces)
 IP="*"
+SSLIP="*"
 PORT="389"
 SSLPORT="636"
 
@@ -108,7 +111,7 @@ SLAPD_PATH="/usr/local/openldap"
 SLAPD_PID_FILE="$SLAPD_PATH/var/run/slapd.pid"
 SLAPD_CONF="$SLAPD_PATH/etc/openldap/slapd.conf"
 SLAPD_CONF_DIR=""
-SLAPD_SERVICES="ldap://$IP:$PORT ldaps://$IP:$SSLPORT"
+SLAPD_SERVICES="ldap://$IP:$PORT ldaps://$SSLIP:$SSLPORT"
 SLAPD_PARAMS=""
 SLAPD_BIN="$SLAPD_PATH/libexec/slapd"
 SLAPD_USER=""
@@ -125,7 +128,7 @@ SLURPD_PARAMS=""
 SLURPD_BIN="$SLAPD_PATH/libexec/slurpd"
 
 # BerkeleyDB directory and files
-BDB_PATH="/usr/bin/BerkeleyDB.4.2"
+BDB_PATH="/usr/local/berkeleydb"
 DB_ARCHIVE_BIN="$BDB_PATH/bin/db_archive"
 DB_RECOVER_BIN="$BDB_PATH/bin/db_recover"
 RECOVER_AT_STARTUP="1" # 0 for OpenLDAP 2.3.x
