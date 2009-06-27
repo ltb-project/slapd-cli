@@ -33,6 +33,11 @@
 #====================================================================
 # Changelog
 #====================================================================
+# Version 0.? (??/2009)
+# - Don't require slapd to be stopped to check configuration
+# - configtest can use the configuration directory if present
+# Author: Jonathan CLARKE (jonathan@phillipoux.net)
+#
 # Version 0.7 (06/2009):
 # - SSLIP parameter
 # Author: Clement OUDOT (LTB-project)
@@ -561,29 +566,30 @@ configtest() {
 	# Start message
 	message "info" "Launching OpenLDAP configuration test..."
 
-	# slapd must be stopped
-	slapd_status
-	
-	if [ $? -ne 1 ]
-	then
-		message "alert" "[ALERT] slapd is running or was not correctly shut down, aborting configuration test"
-		exit 1
-	else
-		# slaptest
-		if [ -z "$SU" ]
-		then
-			$SLAPTEST_BIN -f "$SLAPD_CONF" -u > /dev/null 2>&1
-		else
-			$SU "$SLAPTEST_BIN -f \"$SLAPD_CONF\" -u > /dev/null 2>&1"
-		fi
+	SLAPTEST_PARAMS="-u"	
 
-		if [ $? -eq 0 ]
-		then
-			message "info" "[OK] OpenLDAP configuration test successful"
-		else
-			message "alert" "[ALERT] OpenLDAP configuration test failed"
-			exit 1
-		fi
+	if [ "$SLAPD_CONF_DIR" ]
+	then
+		SLAPTEST_PARAMS="$SLAPTEST_PARAMS -F $SLAPD_CONF_DIR"
+	elif [ "$SLAPD_CONF" ]
+	then
+		SLAPTEST_PARAMS="$SLAPTEST_PARAMS -f $SLAPD_CONF"
+	fi
+
+	# slaptest
+	if [ -z "$SU" ]
+	then
+		$SLAPTEST_BIN $SLAPTEST_PARAMS > /dev/null 2>&1
+	else
+		$SU "$SLAPTEST_BIN $SLAPTEST_PARAMS > /dev/null 2>&1"
+	fi
+
+	if [ $? -eq 0 ]
+	then
+		message "info" "[OK] OpenLDAP configuration test successful"
+	else
+		message "alert" "[ALERT] OpenLDAP configuration test failed"
+		exit 1
 	fi
 }
 
