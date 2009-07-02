@@ -33,10 +33,13 @@
 #====================================================================
 # Changelog
 #====================================================================
-# Version 0.? (??/2009)
+# Version 0.8 (07/2009)
 # - Don't require slapd to be stopped to check configuration
 # - configtest can use the configuration directory if present
+# - BerkeleyDB utils not mandatory to run the script
+# - Add status target
 # Author: Jonathan CLARKE (jonathan@phillipoux.net)
+# Author: Clement OUDOT (LTB-project)
 #
 # Version 0.7 (06/2009):
 # - SSLIP parameter
@@ -224,7 +227,7 @@ if [ ! -d "$piddir" ]; then
 fi
 
 # Rights to execute binaries
-for i in "$SLAPD_BIN" "$SLAPCAT_BIN" "$SLAPINDEX_BIN" "$SLAPTEST_BIN" "$DB_ARCHIVE_BIN" "$DB_RECOVER_BIN"
+for i in "$SLAPD_BIN" "$SLAPCAT_BIN" "$SLAPINDEX_BIN" "$SLAPTEST_BIN"
 do
 	if [ ! -x $i ]
 	then
@@ -280,7 +283,7 @@ start_slapd() {
 	fi
 	
 	# Start message
-	message "info" "Launching OpenLDAP..."
+	message "info" "[INFO] Launching OpenLDAP..."
 
 	# File descriptor limit, only for root
 	if [ $MYUID -eq 0 ]
@@ -339,7 +342,7 @@ start_slapd() {
 
 start_slurpd() {
 	# Start message
-	message "info" "Launching OpenLDAP replication..."
+	message "info" "[INFO] Launching OpenLDAP replication..."
 
 	if [ $ACTIVATE_SLURPD -eq 0 ]
 	then
@@ -385,7 +388,7 @@ start_slurpd() {
 
 stop_slapd() {
 	# Stop message
-	message "info" "Halting OpenLDAP..."
+	message "info" "[INFO] Halting OpenLDAP..."
 
 	# Presence of PID file
 	if [ ! -r $SLAPD_PID_FILE ]
@@ -424,7 +427,7 @@ stop_slapd() {
 
 stop_slurpd() {
 	# Stop message
-	message "info" "Halting OpenLDAP replication..."
+	message "info" "[INFO] Halting OpenLDAP replication..."
 
 	# Desctivate slurpd?
 	DESACTIVATE_SLURPD=`cat $SLAPD_CONF | grep "^replica" | wc -l`
@@ -463,7 +466,7 @@ stop_slurpd() {
 
 forcestop() {
 	# Stop message
-	message "info" "Killing OpenLDAP with force..."
+	message "info" "[INFO] Killing OpenLDAP with force..."
 
 	# Presence of PID file
 	if [ ! -r $SLAPD_PID_FILE ]
@@ -501,7 +504,7 @@ forcestop() {
 	fi
 	
 	# Stop message
-	message "info" "Killing OpenLDAP replication with force..."
+	message "info" "[INFO] Killing OpenLDAP replication with force..."
 
 	# Presence of PID file
 	if [ ! -r $SLURPD_PID_FILE ]
@@ -562,9 +565,51 @@ slapd_status() {
 	fi
 }
 
+display_status() {
+	# Get status
+	slapd_status
+
+	status=$?
+
+	if [ $status -eq 0 ]
+	then
+				message "info" "[INFO] Process slapd is running"
+	fi
+
+	if [ $status -eq 1 ]
+	then
+				message "info" "[INFO] Process slapd is not running"
+	fi
+
+	if [ $status -eq 2 ]
+	then
+				message "info" "[INFO] Unable to determine slapd status"
+	fi
+
+	# Get detected suffix
+	get_confvalues "directory"
+	dbdirs=$RETVAL
+	get_confvalues "suffix"
+	dbsufs=$RETVAL
+
+	if [ ! -z "$dbdirs" -o ! -z "$dbsufs" ]
+	then
+        	i=1
+		for dbdir in $dbdirs
+        	do
+			# Table is not allowed, so we use awk
+                	suf=`echo $dbsufs | awk -v j="$i" 'BEGIN{OFS=" "} {print $j}'`
+			if [ ! -z $suf ]
+			then
+				message "info" "[INFO] Detected suffix: $suf"
+			fi
+		done
+	fi
+}
+
 configtest() {
 	# Start message
-	message "info" "Launching OpenLDAP configuration test..."
+	message "info" "[INFO] Launching OpenLDAP configuration test..."
 
 	SLAPTEST_PARAMS="-u"	
 
@@ -595,7 +640,13 @@ configtest() {
 
 db_recover() {
 	# Start message
-	message "info" "Launching OpenLDAP database recovery..."
+	message "info" "[INFO] Launching OpenLDAP database recovery..."
+
+	if [ ! -x $DB_RECOVER_BIN ]
+	then
+		message "alert" "[ALERT] Cannot execute $DB_RECOVER_BIN, aborting database recovery"
+		exit 1
+	fi
 
 	# slapd must be stopped
 	slapd_status
@@ -647,7 +698,7 @@ db_recover() {
 
 reindex() {
 	# Start message
-	message "info" "Launching OpenLDAP database reindexing..."
+	message "info" "[INFO] Launching OpenLDAP database reindexing..."
 
 	# slapd must be stopped
 	slapd_status
@@ -677,7 +728,14 @@ reindex() {
 
 removelogs() {
 	# Start message
-	message "info" "Launching OpenLDAP database logs archiving..."
+	message "info" "[INFO] Launching OpenLDAP database logs archiving..."
+
+	if [ ! -x $DB_ARCHIVE_BIN ]
+	then
+		message "alert" "[ALERT] Cannot execute $DB_ARCHIVE_BIN, aborting database archiving"
+		exit 1
+	fi
+
 
 	# slapd must be stopped
 	slapd_status
@@ -729,7 +787,7 @@ removelogs() {
 
 backup() {
 	# Start message
-	message "info" "Launching OpenLDAP database backup..."
+	message "info" "[INFO] Launching OpenLDAP database backup..."
 
 	# Backup directory
 	mkdir -p "$BACKUP_PATH"
@@ -813,6 +871,9 @@ restart)
 	start_slurpd
 	start_slapd
 	;;
+status)
+	display_status
+	;;
 configtest)
 	configtest
 	;;
@@ -829,7 +890,7 @@ backup)
 	backup
 	;;
 *)
-	echo "Usage: $0 {start|stop|forcestop|restart|configtest|db_recover|reindex|removelogs|backup}"
+	echo "Usage: $0 {start|stop|forcestop|restart|status|configtest|db_recover|reindex|removelogs|backup}"
 	exit 1
 	;;
 esac
