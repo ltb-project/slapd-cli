@@ -4,9 +4,21 @@
 # Start/stop script for OpenLDAP (2.2 minimum)
 # (http://www.openldap.org).
 # Use BerkeleyDB utilities and save data in LDIF format.
-#
-# chkconfig: 345 85 15
+# 
+# chkconfig: 2345 85 15
 # description: OpenLDAP
+#
+### BEGIN INIT INFO
+# Provides:          slapd
+# Required-Start:    $remote_fs $syslog
+# Required-Stop:     $remote_fs $syslog
+# Should-Start:      $network $time
+# Should-Stop:       $network $time
+# Default-Start:     2 3 4 5
+# Default-Stop:      0 1 6
+# Short-Description: OpenLDAP
+# Description:       OpenLDAP init script provided by LTB-project.org
+### END INIT INFO
 #
 # Copyright (C) 2008 Jonathan CLARKE
 # Copyright (C) 2007 Olivier LI-KIANG-CHEONG
@@ -33,10 +45,12 @@
 #====================================================================
 # Changelog
 #====================================================================
-# Version 0.9 (07/2009)
+# Version 0.9 (10/2009)
 # - Get conf values from file or back-config
 # - Change parameter name relative to slurpd
 # - Refactor some portion of the entire code
+# - Add LSB init script informations
+# - Add force-reload target (LSB compliance)
 # Author: Clement OUDOT (LTB-project)
 # Author: Thomas CHEMINEAU
 #
@@ -951,6 +965,12 @@ case $1 in
 	start_slurpd
 	start_slapd
 	;;
+	force-reload)
+	forcestop
+	configtest
+	start_slurpd
+	start_slapd
+	;;
 	status)
 	display_status
 	;;
@@ -970,7 +990,7 @@ case $1 in
 	backup
 	;;
 	*)
-	echo "Usage: $0 {start|stop|forcestop|restart|status|configtest|db_recover|reindex|removelogs|backup}"
+	echo "Usage: $0 {start|stop|forcestop|restart|force-reload|status|configtest|db_recover|reindex|removelogs|backup}"
 	exit 1
 	;;
 esac
