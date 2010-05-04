@@ -40,6 +40,8 @@ BACKUP_AT_SHUTDOWN="0"
 BACKUP_PATH="$SLAPD_PATH/var/save"
 BACKUP_FILE="$BACKUP_PATH/data_`date +%Y%m%d%H%M%S`.ldif"
 BACKUP_SUFFIX="`date +%Y%m%d%H%M%S`.ldif"
+BACKUP_COMPRESS_EXT="" # gz, bz2, ...
+BACKUP_COMPRESS_BIN="" # /bin/gzip, /bin/bzip2, ...
 
 # Other
 TIMEOUT="30" # Max time to stop process

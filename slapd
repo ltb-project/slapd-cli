@@ -45,6 +45,11 @@
 #====================================================================
 # Changelog
 #====================================================================
+# Version 1.0
+# - Possibility to compress saved files
+# Author: Clement OUDOT (LTB-project)
+# Author: 
+#
 # Version 0.9 (10/2009)
 # - Get conf values from file or back-config
 # - Change parameter name relative to slurpd
@@ -168,6 +173,8 @@ BACKUP_AT_SHUTDOWN="1"
 BACKUP_PATH="/tmp/openldap"
 BACKUP_FILE="$BACKUP_PATH/data_`date +%Y%m%d%H%M%S`.ldif"
 BACKUP_SUFFIX="`date +%Y%m%d%H%M%S`.ldif"
+BACKUP_COMPRESS_EXT="" # gz, bz2, ...
+BACKUP_COMPRESS_BIN="" # /bin/gzip, /bin/bzip2, ...
 
 # Other
 TIMEOUT="60"    # Max time to stop process
@@ -929,12 +936,31 @@ backup() {
 		fi
 
 		# alert
-		if [ $? -eq 0 ]
+		if [ $? -ne 0 ]
 		then
-			message "info" "[OK] data save in $file"
-		else
 			message "alert" "[ALERT] OpenLDAP database backup failed"
 			exit 1
+		fi
+
+		# compress
+		if [ -z $BACKUP_COMPRESS_EXT ]
+		then
+			message "info" "[OK] data saved in $file"
+		else
+			if [ -z "$SU" ]
+			then
+				$BACKUP_COMPRESS_BIN "$file"
+			else
+				$SU "$BACKUP_COMPRESS_BIN $file"
+			fi
+
+			# alert
+			if [ $? -ne 0 ]
+			then
+				message "alert" "[ALERT] OpenLDAP database backup compression failed"
+				exit 1
+			fi
+			message "info" "[OK] data saved in ${file}.$BACKUP_COMPRESS_EXT"
 		fi
 
 		i=`expr $i + 1`
