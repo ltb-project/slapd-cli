@@ -26,7 +26,7 @@
 # Copyright (C) 2005 Sebastien BAHLOUL 
 # Copyright (C) 2005 Raphael OUAZANA 
 # Copyright (C) 2005 Clement OUDOT
-# Copyright (C) 2009 LTB-project.org
+# Copyright (C) 2010 LTB-project.org
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License
@@ -45,10 +45,10 @@
 #====================================================================
 # Changelog
 #====================================================================
-# Version 1.0
+# Version 1.0 (05/2010)
 # - Possibility to compress saved files
 # Author: Clement OUDOT (LTB-project)
-# Author: 
+# Author: James LEVER
 #
 # Version 0.9 (10/2009)
 # - Get conf values from file or back-config
