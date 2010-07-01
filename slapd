@@ -45,6 +45,10 @@
 #====================================================================
 # Changelog
 #====================================================================
+# Version 1.1 (2010)
+# - Suffix not well displayed instatus (#243)
+# Author: Clement OUDOT (LTB-project)
+# 
 # Version 1.0 (05/2010)
 # - Possibility to compress saved files
 # Author: Clement OUDOT (LTB-project)
@@ -688,6 +692,7 @@ display_status() {
 			then
 				message "info" "[INFO] Detected suffix: $suf"
 			fi
+			i=`expr $i + 1`
 		done
 	fi
 }
