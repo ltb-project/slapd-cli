@@ -265,7 +265,7 @@ backconfig_get_values() {
 	slapcat_cmd="$SLAPCAT_BIN -F $SLAPD_CONF_DIR -b cn=config"
 	if [ -n "$2" ]
 	then
-		slapcat_cmd="$slapcat_cmd -a $2"
+		slapcat_cmd="$slapcat_cmd -a '$2'"
 	fi
 	if [ -z "$SU" ]
 	then
