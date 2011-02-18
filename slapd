@@ -45,6 +45,10 @@
 #====================================================================
 # Changelog
 #====================================================================
+# Version 1.2 (2011)
+# - Add debug target (#303)
+# Author: Clement OUDOT (LTB-project)
+#
 # Version 1.1 (2010)
 # - Suffix not well displayed instatus (#243)
 # Author: Clement OUDOT (LTB-project)
@@ -181,8 +185,9 @@ BACKUP_COMPRESS_EXT="" # gz, bz2, ...
 BACKUP_COMPRESS_BIN="" # /bin/gzip, /bin/bzip2, ...
 
 # Other
-TIMEOUT="60"    # Max time to stop process
-FD_LIMIT="2048" # Max file descriptor
+TIMEOUT="60"      # Max time to stop process
+FD_LIMIT="2048"   # Max file descriptor
+DEBUG_LEVEL="256" # Debug loglevel
 
 # Script specific
 PROG_NAME=`basename $0 | sed 's/^[KS][0-9][0-9]//'` # For nice messages
@@ -365,6 +370,9 @@ fi
 # Functions
 #====================================================================
 start_slapd() {
+
+	# $1: debug level
+
 	# Check if db_recover is required
 	if [ $RECOVER_AT_STARTUP -eq 1 ]
 	then
@@ -410,24 +418,29 @@ start_slapd() {
 	fi
 
 	# It's time to start slapd
-	$SLAPD_BIN -h "$SLAPD_SERVICES" $SLAPD_PARAMS
-	sleep 1
 
-	# Presence of PID file
-	if [ ! -r $SLAPD_PID_FILE ]
-	then
-		message "alert" "[ALERT] no PID file for slapd"
-		exit 1
-	fi
-
-	# Is slapd launched?
-	PID=`cat $SLAPD_PID_FILE`
-	if [ ! -e /proc/$PID ]
-	then
-		message "alert" "[ALERT] slapd not running"
-		exit 1
+	if [ -n "$1" ]; then
+		$SLAPD_BIN -h "$SLAPD_SERVICES" $SLAPD_PARAMS -d $1
 	else
-		message "info" "[OK] OpenLDAP started on port $PORT and $SSLPORT"
+		$SLAPD_BIN -h "$SLAPD_SERVICES" $SLAPD_PARAMS
+		sleep 1
+
+		# Presence of PID file
+		if [ ! -r $SLAPD_PID_FILE ]
+		then
+			message "alert" "[ALERT] no PID file for slapd"
+			exit 1
+		fi
+
+		# Is slapd launched?
+		PID=`cat $SLAPD_PID_FILE`
+		if [ ! -e /proc/$PID ]
+		then
+			message "alert" "[ALERT] slapd not running"
+			exit 1
+		else
+			message "info" "[OK] OpenLDAP started on port $PORT and $SSLPORT"
+		fi
 	fi
 }
 
@@ -996,6 +1009,12 @@ case $1 in
 	start_slurpd
 	start_slapd
 	;;
+	debug)
+	stop_slapd
+	stop_slurpd
+	start_slurpd
+	start_slapd $DEBUG_LEVEL
+	;;
 	force-reload)
 	forcestop
 	configtest
@@ -1021,7 +1040,7 @@ case $1 in
 	backup
 	;;
 	*)
-	echo "Usage: $0 {start|stop|forcestop|restart|force-reload|status|configtest|db_recover|reindex|removelogs|backup}"
+	echo "Usage: $0 {start|stop|forcestop|restart|debug|force-reload|status|configtest|db_recover|reindex|removelogs|backup}"
 	exit 1
 	;;
 esac

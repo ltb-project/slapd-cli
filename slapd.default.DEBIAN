@@ -46,4 +46,5 @@ BACKUP_COMPRESS_BIN="" # /bin/gzip, /bin/bzip2, ...
 # Other
 TIMEOUT="30" # Max time to stop process
 FD_LIMIT="1024" # Max file descriptor
+DEBUG_LEVEL="256" # Debug loglevel
 
