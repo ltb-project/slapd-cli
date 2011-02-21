@@ -279,11 +279,9 @@ backconfig_get_values() {
 	fi
 	if [ -z "$SU" ]
 	then
-		list=`$slapcat_cmd | perl -p0e 's/\n //g' | grep "^$1:" \
-		| awk '{print $2}'`
+		list=`$slapcat_cmd | perl -p0e 's/\n //g' | grep "^$1:" | sed "s/$1: //" | sed "s/ /#20/g"`
 	else
-		list=`$SU "$slapcat_cmd" | perl -p0e 's/\n //g' | grep "^$1:" \
-		| awk '{print $2}'`
+		list=`$SU "$slapcat_cmd" | perl -p0e 's/\n //g' | grep "^$1:" | sed "s/$1: //" | sed "s/ /#20/g"`
 	fi
 
 	if [ -n "$list" ]; then
@@ -706,9 +704,10 @@ display_status() {
 		do
 			# Table is not allowed, so we use awk
 			suf=`echo $dbsufs | awk -v j="$i" 'BEGIN{OFS=" "} {print $j}'`
+			sufprint=`echo $suf | sed "s/#20/ /"`
 			if [ ! -z $suf ]
 			then
-				message "info" "[INFO] Detected suffix: $suf"
+				message "info" "[INFO] Detected suffix: $sufprint"
 			fi
 			i=`expr $i + 1`
 		done
@@ -941,49 +940,49 @@ backup() {
 	do
 		# Table is not allowed, so we use awk
 		suf=`echo $dbsufs | awk -v j="$i" 'BEGIN{OFS=" "} {print $j}'`
-		dir=`basename $dbdir`
-		file="$BACKUP_PATH/$dir-$BACKUP_SUFFIX"
-		base="-b $suf"
 
-		if [ -z $suf ]
-		then
-			base=""
-		fi
-
-		# slapcat
-		if [ -z "$SU" ]
-		then
-			$SLAPCAT_BIN $base $SLAPCAT_PARAMS -l "$file"
+		if [ -z $suf ]; then
+			message "info" "No suffix for $dbdir"
 		else
-			$SU "$SLAPCAT_BIN $base $SLAPCAT_PARAMS" > "$file"
-		fi
+			sufprint=`echo $suf | sed "s/#20/ /"`
+			dir=`basename $dbdir`
+			file="$BACKUP_PATH/$dir-$BACKUP_SUFFIX"
 
-		# alert
-		if [ $? -ne 0 ]
-		then
-			message "alert" "[ALERT] OpenLDAP database backup failed"
-			exit 1
-		fi
-
-		# compress
-		if [ -z $BACKUP_COMPRESS_EXT ]
-		then
-			message "info" "[OK] data saved in $file"
-		else
+			# slapcat
 			if [ -z "$SU" ]
 			then
-				$BACKUP_COMPRESS_BIN "$file"
+				$SLAPCAT_BIN -b "$sufprint" $SLAPCAT_PARAMS -l "$file"
 			else
-				$SU "$BACKUP_COMPRESS_BIN $file"
+				$SU "$SLAPCAT_BIN -b \"$sufprint\" $SLAPCAT_PARAMS" > "$file"
 			fi
 
 			# alert
 			if [ $? -ne 0 ]
 			then
-				message "alert" "[ALERT] OpenLDAP database backup compression failed"
+				message "alert" "[ALERT] OpenLDAP database backup failed"
 				exit 1
 			fi
-			message "info" "[OK] data saved in ${file}.$BACKUP_COMPRESS_EXT"
+
+			# compress
+			if [ -z $BACKUP_COMPRESS_EXT ]
+			then
+				message "info" "[OK] data saved in $file"
+			else
+				if [ -z "$SU" ]
+				then
+					$BACKUP_COMPRESS_BIN "$file"
+				else
+					$SU "$BACKUP_COMPRESS_BIN $file"
+				fi
+
+				# alert
+				if [ $? -ne 0 ]
+				then
+					message "alert" "[ALERT] OpenLDAP database backup compression failed"
+					exit 1
+				fi
+				message "info" "[OK] data saved in ${file}.$BACKUP_COMPRESS_EXT"
+			fi
 		fi
 
 		i=`expr $i + 1`
