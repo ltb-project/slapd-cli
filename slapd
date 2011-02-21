@@ -188,6 +188,7 @@ BACKUP_COMPRESS_BIN="" # /bin/gzip, /bin/bzip2, ...
 TIMEOUT="60"      # Max time to stop process
 FD_LIMIT="2048"   # Max file descriptor
 DEBUG_LEVEL="256" # Debug loglevel
+SPECIAL_QUOTE="1" # Quote some command line parameters (eg: LDAP filters)
 
 # Script specific
 PROG_NAME=`basename $0 | sed 's/^[KS][0-9][0-9]//'` # For nice messages
@@ -270,7 +271,11 @@ backconfig_get_values() {
 	slapcat_cmd="$SLAPCAT_BIN -F $SLAPD_CONF_DIR -b cn=config"
 	if [ -n "$2" ]
 	then
-		slapcat_cmd="$slapcat_cmd -a '$2'"
+		if [ $SPECIAL_QUOTE -eq 1 ]; then
+			slapcat_cmd="$slapcat_cmd -a '$2'"
+		else
+			slapcat_cmd="$slapcat_cmd -a $2"
+		fi
 	fi
 	if [ -z "$SU" ]
 	then
