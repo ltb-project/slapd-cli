@@ -247,7 +247,7 @@ conffile_get_values() {
 	# $1: parameter in slapd.conf
 	# $RETVAL: list of values
 
-	list=`grep "^$1[[:space:]]" $SLAPD_CONF | grep -v '^#' | awk '{ print $2;}' | sed -e 's/"//g'`
+	list=`grep "^$1[[:space:]]" $SLAPD_CONF | grep -v '^#' | sed "s/$1[[:space:]]*//" | sed "s/ /#20/g"| sed -e 's/"//g'`
 
 	if [ "$list" ]; then
 		RETVAL="$list"
