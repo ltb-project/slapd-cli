@@ -448,14 +448,13 @@ start_slapd() {
 }
 
 start_slurpd() {
-	# Start message
-	message "info" "[INFO] Launching OpenLDAP replication..."
-
 	if [ $SLURPD_ACTIVATE -eq 0 ]
 	then
-		message "info" "[INFO] no replica found in configuration, aborting lauching slurpd"
 		return 1
 	fi
+
+	# Start message
+	message "info" "[INFO] Launching OpenLDAP replication..."
 
 	# Parameters
 	if [ "$SLAPD_CONF_DIR" ]
@@ -533,15 +532,14 @@ stop_slapd() {
 }
 
 stop_slurpd() {
-	# Stop message
-	message "info" "[INFO] Halting OpenLDAP replication..."
-
 	# Desactivate slurpd?
 	if [ $SLURPD_ACTIVATE -eq 0 ]
 	then
-		message "info" "[INFO] no replica found in configuration, aborting stopping slurpd"
 		return 1
 	fi
+
+	# Stop message
+	message "info" "[INFO] Halting OpenLDAP replication..."
 
 	# Presence of PID file
 	if [ ! -r $SLURPD_PID_FILE ]
