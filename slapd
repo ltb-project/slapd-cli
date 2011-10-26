@@ -207,13 +207,15 @@ message() {
 	# $1: syslog level
 	# $2: message
 
-	if [ $OS = "Linux" ]
+	# Log to syslog
+	logger -p "local4.$1" -t $PROG_NAME -i "$2"
+
+	# Output to console
+	if [ "$1" = "alert" ]
 	then
-		logger -p "local4.$1" -s -t $PROG_NAME -i "$2"
+		echo "$PROG_NAME: $2">&2
 	else
-		# Try without option -s
-		logger -p "local4.$1" -t $PROG_NAME -i "$2"
-		echo "$PROG_NAME: $2"
+		echo "$PROG_NAME: $2">&1
 	fi
 }
 
