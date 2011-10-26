@@ -18,6 +18,7 @@ SLAPD_PARAMS=""
 SLAPD_BIN="/usr/sbin/slapd"
 SLAPD_USER=""
 SLAPD_GROUP=""
+SLAPD_SYSLOG_LOCAL_USER="local4"
 
 DATA_PATH="auto"
 

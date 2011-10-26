@@ -158,6 +158,7 @@ SLAPD_PARAMS=""
 SLAPD_BIN="$SLAPD_PATH/libexec/slapd"
 SLAPD_USER=""
 SLAPD_GROUP=""
+SLAPD_SYSLOG_LOCAL_USER="local4"
 
 DATA_PATH="$SLAPD_PATH/var/openldap-data"
 
@@ -208,7 +209,7 @@ message() {
 	# $2: message
 
 	# Log to syslog
-	logger -p "local4.$1" -t $PROG_NAME -i "$2"
+	logger -p "$SLAPD_SYSLOG_LOCAL_USER.$1" -t $PROG_NAME -i "$2"
 
 	# Output to console
 	if [ "$1" = "alert" ]
@@ -420,6 +421,11 @@ start_slapd() {
 	if [ "$SLAPD_GROUP" -a $MYGID -eq 0 ]
 	then
 		SLAPD_PARAMS="$SLAPD_PARAMS -g $SLAPD_GROUP"
+	fi
+
+	if [ "$SLAPD_SYSLOG_LOCAL_USER" ]
+	then
+		SLAPD_PARAMS="$SLAPD_PARAMS -l $SLAPD_SYSLOG_LOCAL_USER" 
 	fi
 
 	# It's time to start slapd
