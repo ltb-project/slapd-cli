@@ -1042,7 +1042,7 @@ restore() {
 				message "info" "[INFO] Restore file $file for $sufprint"
 
 				# uncompress
-				if [ -n $BACKUP_COMPRESS_EXT ]
+				if [ "$BACKUP_COMPRESS_EXT" ]
 				then
 					if [ -z "$SU" ]
 					then
@@ -1088,7 +1088,7 @@ restore() {
 				message "info" "[OK] Data restored for $sufprint"
 
 				# compress backup again if needed
-				if [ -n $BACKUP_COMPRESS_EXT ]
+				if [ "$BACKUP_COMPRESS_EXT" ]
 				then
 					if [ -z "$SU" ]
 					then
