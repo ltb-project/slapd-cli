@@ -43,101 +43,9 @@
 #====================================================================
 
 #====================================================================
-# Changelog
+# Version
 #====================================================================
-# Version 1.2 (2011)
-# - Add debug target (#303)
-# Author: Clement OUDOT (LTB-project)
-#
-# Version 1.1 (2010)
-# - Suffix not well displayed instatus (#243)
-# Author: Clement OUDOT (LTB-project)
-# 
-# Version 1.0 (05/2010)
-# - Possibility to compress saved files
-# Author: Clement OUDOT (LTB-project)
-# Author: James LEVER
-#
-# Version 0.9 (10/2009)
-# - Get conf values from file or back-config
-# - Change parameter name relative to slurpd
-# - Refactor some portion of the entire code
-# - Add LSB init script informations
-# - Add force-reload target (LSB compliance)
-# Author: Clement OUDOT (LTB-project)
-# Author: Thomas CHEMINEAU
-#
-# Version 0.8 (07/2009)
-# - Don't require slapd to be stopped to check configuration
-# - configtest can use the configuration directory if present
-# - BerkeleyDB utils not mandatory to run the script
-# - Add status target
-# Author: Jonathan CLARKE (jonathan@phillipoux.net)
-# Author: Clement OUDOT (LTB-project)
-#
-# Version 0.7 (06/2009):
-# - SSLIP parameter
-# Author: Clement OUDOT (LTB-project)
-#
-# Version 0.6.5 (07/2008):
-# - renamed $UID and $GID to $MYUID and $MYGID to enable bash compatibility
-# since $UID is read-only in bash
-# - do not run "mkdir $BACKUP_PATH" through $SU command, it is unlikely to
-# have permission to do that
-# - corrected bug in check for slurpd activation in slapd.conf (-ne instead
-# of -eq)
-# - do not save "slapcat" output through $SU command for backup,
-# the SLAPD_USER generally does not have write permission for that
-# Author: Jonathan CLARKE (LINAGORA)
-#
-# Version 0.6.4 (03/2008):
-# - changed default PS command to "ps -efww" to avoid truncating
-# output, and put it in global variable $PS_COMMAND
-# Author: Jonathan CLARKE (LINAGORA)
-#
-# Version 0.6.3 (01/2008):
-# - add SLAPD_CONF_DIR global parameter, so that the directory could be run
-# through a configuration directory unless the traditional slapd.conf file
-# - replace all ps commands by standard ps commands, for UNIX compatitiblity
-# (tested under Linux and Solaris), same with id command (add $MYUID and $MYGID)
-# - some correctives measures, so that special characters are escaped in
-# $SLAPD_SERVICES global parameter
-# - only check if SLURPD_BIN is executable if the config file specifies slurpd
-# replication
-# Authors: Thomas CHEMINEAU (LINAGORA)
-#          Jonathan CLARKE (LINAGORA)
-#
-# Version 0.6 (08/2007)
-# - Check the pidfile directory exists with correct permissions
-# - Change the "su command"
-# Author: Olivier LI-KIANG-CHEONG
-#
-# Version 0.5 (05/2007):
-# - function to get values of parameters in config file.
-# - do backup and restore operations for all databases declared
-# in config file (combined with awk and low level of regexp in grep).
-# - some correctives measures
-# Author: Thomas CHEMINEAU (LINAGORA)
-#
-# Version 0.4 (10/2005):
-# - change init level
-# Author: Raphael OUAZANA (LINAGORA)
-#
-# Version 0.3 (10/2005):
-# - check port before killing process, cause several instances can
-# be running. 
-# - If a user is configured, do a su before launching slurpd
-# Author: Clement OUDOT (LINAGORA)
-#
-# Version 0.2 (09/2005):
-# - Add chkconfig comments for RedHat
-# - If a user is configured, do a su before launching utilities
-# Author: Clement OUDOT (LINAGORA)
-#
-# Version 0.1 (08/2005):
-# - First version with all scripts done by LINAGORA
-# Author: Clement OUDOT (LINAGORA)
-#====================================================================
+VERSION="1.3"
 
 #====================================================================
 # Default parameters (if /etc/default/{script_name} is not present)
@@ -678,6 +586,10 @@ slapd_status() {
 }
 
 display_status() {
+
+	# Print script version
+	message "info" "[INFO] LDAP Tool Box OpenLDAP init script version $VERSION" 
+
 	# Get status
 	slapd_status
 
