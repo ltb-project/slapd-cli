@@ -865,9 +865,6 @@ removelogs() {
 		exit 1
 	fi
 
-	# Do backup for all databases,
-	# except if DATA_PATH is 'auto'
-
 	dbdirs="$DATA_PATH"
 
 	if [ "$DATA_PATH" = "auto" ]
@@ -956,6 +953,7 @@ backup() {
 				$SLAPCAT_BIN -b "$sufprint" $SLAPCAT_PARAMS -l "$file"
 			else
 				$SU "$SLAPCAT_BIN -b \"$sufprint\" $SLAPCAT_PARAMS" > "$file"
+				chown $SLAPD_USER:$SLAPD_GROUP $file
 			fi
 
 			# alert
