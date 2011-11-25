@@ -1034,7 +1034,7 @@ restore() {
 			dir=`basename $dbdir`
 
 			# Get the most recent backup for this database
-			file=`ls -1t "$BACKUP_PATH/$dir-"* | head -1`
+			file=`ls -1t "$BACKUP_PATH/$dir-"* 2>/dev/null | head -1`
 			
 			if [ -z $file ]; then
 				message "info" "[INFO] No backup file for $sufprint, skipping..."
