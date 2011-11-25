@@ -162,6 +162,7 @@ SLAPD_SYSLOG_LOCAL_USER="local4"
 
 DATA_PATH="$SLAPD_PATH/var/openldap-data"
 
+SLAPADD_BIN="$SLAPD_PATH/sbin/slapadd"
 SLAPCAT_BIN="$SLAPD_PATH/sbin/slapcat"
 SLAPINDEX_BIN="$SLAPD_PATH/sbin/slapindex"
 SLAPTEST_BIN="$SLAPD_PATH/sbin/slaptest"
@@ -180,10 +181,10 @@ RECOVER_AT_STARTUP="1" # 0 for OpenLDAP 2.3.x
 # Backup
 BACKUP_AT_SHUTDOWN="1"
 BACKUP_PATH="/tmp/openldap"
-BACKUP_FILE="$BACKUP_PATH/data_`date +%Y%m%d%H%M%S`.ldif"
 BACKUP_SUFFIX="`date +%Y%m%d%H%M%S`.ldif"
 BACKUP_COMPRESS_EXT="" # gz, bz2, ...
 BACKUP_COMPRESS_BIN="" # /bin/gzip, /bin/bzip2, ...
+BACKUP_UNCOMPRESS_BIN="" # /bin/gunzip, /bin/bunzip2, ...
 
 # Other
 TIMEOUT="60"      # Max time to stop process
@@ -770,9 +771,6 @@ db_recover() {
 		exit 1
 	fi
 
-	# Do backup for all databases,
-	# except if DATA_PATH is 'auto'
-
 	dbdirs="$DATA_PATH"
 
 	if [ "$DATA_PATH" = "auto" ]
@@ -921,9 +919,7 @@ backup() {
 		SLAPCAT_PARAMS="-f $SLAPD_CONF"
 	fi
 
-	# Do backup for all databases,
-	# except if DATA_PATH is 'auto'
-
+	# Do backup for all databases
 	dbdirs="$DATA_PATH"
 	dbsufs=""
 
@@ -948,7 +944,7 @@ backup() {
 		suf=`echo $dbsufs | awk -v j="$i" 'BEGIN{OFS=" "} {print $j}'`
 
 		if [ -z $suf ]; then
-			message "info" "No suffix for $dbdir"
+			message "info" "[INFO] No suffix for $dbdir"
 		else
 			sufprint=`echo $suf | sed "s/#20/ /"`
 			dir=`basename $dbdir`
@@ -991,6 +987,127 @@ backup() {
 			fi
 		fi
 
+		i=`expr $i + 1`
+	done
+
+}
+
+
+restore() {
+	# Start message
+	message "info" "[INFO] Launching OpenLDAP database restore..."
+
+	if [ "$SLAPD_CONF_DIR" ]
+	then
+		SLAPADD_PARAMS="-F $SLAPD_CONF_DIR"
+	elif [ "$SLAPD_CONF" ]
+	then
+		SLAPADD_PARAMS="-f $SLAPD_CONF"
+	fi
+
+	# Do restore for all databases
+	dbdirs="$DATA_PATH"
+	dbsufs=""
+
+	if [ "$DATA_PATH" = "auto" ]
+	then
+		get_confvalues "directory"
+		dbdirs=$RETVAL
+		get_confvalues "suffix"
+		dbsufs=$RETVAL
+
+		if [ -z "$dbdirs" -o -z "$dbsufs" ]
+		then
+			message "alert" "[ALERT] No database directories found"
+			exit 1
+		fi
+	fi
+
+	i=1
+	for dbdir in $dbdirs
+	do
+		# Table is not allowed, so we use awk
+		suf=`echo $dbsufs | awk -v j="$i" 'BEGIN{OFS=" "} {print $j}'`
+
+		if [ -z $suf ]; then
+			message "info" "[INFO] No suffix for $dbdir"
+		else
+			sufprint=`echo $suf | sed "s/#20/ /"`
+			dir=`basename $dbdir`
+
+			# Get the most recent backup for this database
+			file=`ls -1t "$BACKUP_PATH/$dir-"* | head -1`
+			
+			if [ -z $file ]; then
+				message "info" "[INFO] No backup file for $sufprint, skipping..."
+			else
+				message "info" "[INFO] Restore file $file for $sufprint"
+
+				# uncompress
+				if [ -n $BACKUP_COMPRESS_EXT ]
+				then
+					if [ -z "$SU" ]
+					then
+						$BACKUP_UNCOMPRESS_BIN "$file"
+					else
+						$SU "$BACKUP_UNCOMPRESS_BIN $file"
+					fi
+
+					# alert
+					if [ $? -ne 0 ]
+					then
+						message "alert" "[ALERT] OpenLDAP database backup uncompression failed"
+						exit 1
+					fi
+
+					file=${file%\.*}
+				fi
+
+				SLAPADD_PARAMS="$SLAPADD_PARAMS -b $sufprint -l $file"
+
+				# Delete current data
+				if [ -z "$SU" ]
+				then
+					rm -rf "$dbdir/"*
+				else
+					$SU "rm -rf $dbdir/"*
+				fi
+
+				# Import backup
+				if [ -z "$SU" ]
+				then
+					$SLAPADD_BIN $SLAPADD_PARAMS
+				else
+					$SU "$SLAPADD_BIN $SLAPADD_PARAMS"
+				fi
+				
+				# alert
+				if [ $? -ne 0 ]
+				then
+					message "alert" "[ALERT] OpenLDAP database restore failed for $sufprint"
+					exit 1
+				fi
+				message "info" "[OK] Data restored for $sufprint"
+
+				# compress backup again if needed
+				if [ -n $BACKUP_COMPRESS_EXT ]
+				then
+					if [ -z "$SU" ]
+					then
+						$BACKUP_COMPRESS_BIN "$file"
+					else
+						$SU "$BACKUP_COMPRESS_BIN $file"
+					fi
+
+					# alert
+					if [ $? -ne 0 ]
+						then
+						message "alert" "[ALERT] OpenLDAP database backup compression failed"
+						exit 1
+					fi
+				fi
+			fi
+		fi
 		i=`expr $i + 1`
 	done
 
@@ -1049,8 +1166,15 @@ case $1 in
 	backup)
 	backup
 	;;
+	restore)
+	stop_slapd
+	stop_slurpd
+	restore
+	start_slurpd
+	start_slapd
+	;;
 	*)
-	echo "Usage: $0 {start|stop|forcestop|restart|debug|force-reload|status|configtest|db_recover|reindex|removelogs|backup}"
+	echo "Usage: $0 {start|stop|forcestop|restart|debug|force-reload|status|configtest|db_recover|reindex|removelogs|backup|restore}"
 	exit 1
 	;;
 esac

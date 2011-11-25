@@ -22,6 +22,7 @@ SLAPD_SYSLOG_LOCAL_USER="local4"
 
 DATA_PATH="auto"
 
+SLAPADD_BIN="$SLAPD_PATH/sbin/slapadd"
 SLAPCAT_BIN="$SLAPD_PATH/sbin/slapcat"
 SLAPINDEX_BIN="$SLAPD_PATH/sbin/slapindex"
 SLAPTEST_BIN="$SLAPD_PATH/sbin/slaptest"
@@ -39,10 +40,10 @@ RECOVER_AT_STARTUP="0"
 # Backup
 BACKUP_AT_SHUTDOWN="0"
 BACKUP_PATH="$SLAPD_PATH/var/save"
-BACKUP_FILE="$BACKUP_PATH/data_`date +%Y%m%d%H%M%S`.ldif"
 BACKUP_SUFFIX="`date +%Y%m%d%H%M%S`.ldif"
 BACKUP_COMPRESS_EXT="" # gz, bz2, ...
 BACKUP_COMPRESS_BIN="" # /bin/gzip, /bin/bzip2, ...
+BACKUP_UNCOMPRESS_BIN="" # /bin/gunzip, /bin/bunzip2, ...
 
 # Other
 TIMEOUT="30" # Max time to stop process
