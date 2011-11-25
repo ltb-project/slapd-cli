@@ -973,7 +973,7 @@ restore() {
 					file=${file%\.*}
 				fi
 
-				SLAPADD_PARAMS="$SLAPADD_PARAMS -b $sufprint -l $file"
+				SLAPADD_PARAMS="$SLAPADD_PARAMS -l $file"
 
 				# Delete current data
 				if [ -z "$SU" ]
@@ -986,9 +986,9 @@ restore() {
 				# Import backup
 				if [ -z "$SU" ]
 				then
-					$SLAPADD_BIN $SLAPADD_PARAMS
+					$SLAPADD_BIN -b "$sufprint" $SLAPADD_PARAMS
 				else
-					$SU "$SLAPADD_BIN $SLAPADD_PARAMS"
+					$SU "$SLAPADD_BIN -b \"$sufprint\" $SLAPADD_PARAMS"
 				fi
 				
 				# alert
