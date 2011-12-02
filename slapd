@@ -631,6 +631,8 @@ display_status() {
 			i=`expr $i + 1`
 		done
 	fi
+
+	exit $status
 }
 
 configtest() {
