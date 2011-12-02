@@ -904,6 +904,44 @@ backup() {
 
 }
 
+backupconfig() {
+	# Start message
+	message "info" "[INFO] Launching OpenLDAP configuration backup..."
+
+	# Backup directory
+	mkdir -p "$BACKUP_PATH"
+
+	file=""
+
+	if [ "$SLAPD_CONF_DIR" ]
+	then
+		file="$BACKUP_PATH/config-$BACKUP_SUFFIX"
+
+		# slapcat
+		if [ -z "$SU" ]
+		then
+			$SLAPCAT_BIN -n0 -l "$file"
+		else
+			$SU "$SLAPCAT_BIN -n0" > "$file"
+			chown $SLAPD_USER:$SLAPD_GROUP $file
+		fi
+
+	elif [ "$SLAPD_CONF" ]
+	then
+		file="$BACKUP_PATH/slapd-`date +%Y%m%d%H%M%S`.conf"
+		cp $SLAPD_CONF $file
+	fi
+
+	# alert
+	if [ $? -ne 0 ]
+	then
+		message "alert" "[ALERT] OpenLDAP configuration backup failed"
+		exit 1
+	fi
+
+	message "info" "[OK] Configuration saved in $file"
+
+}
 
 restore() {
 	# Start message
@@ -1025,6 +1063,59 @@ restore() {
 
 }
 
+restoreconfig() {
+	# Start message
+	message "info" "[INFO] Launching OpenLDAP configuration restore..."
+
+	if [ "$SLAPD_CONF_DIR" ]
+	then
+		# Get the most recent backup of cn=config
+		file=`ls -1t "$BACKUP_PATH/config-"* 2>/dev/null | head -1`
+
+		if [ -z $file ]; then
+			message "info" "[INFO] No configuration backup found, skipping..."
+		else
+			message "info" "[INFO] Restore configuration file $file"
+
+			# Delete current data
+			if [ -z "$SU" ]
+			then
+				rm -rf "$SLAPD_CONF_DIR/"*
+			else
+				$SU "rm -rf $SLAPD_CONF_DIR/"*
+			fi
+
+			# Import backup
+			if [ -z "$SU" ]
+			then
+				$SLAPADD_BIN -n0 -F $SLAPD_CONF_DIR -l $file
+			else
+				$SU "$SLAPADD_BIN -n0 -F $SLAPD_CONF_DIR -l $file"
+			fi
+		fi
+
+	elif [ "$SLAPD_CONF" ]
+	then
+		# Get the most recent backup of slapd.conf
+		file=`ls -1t "$BACKUP_PATH/slapd-"*.conf 2>/dev/null | head -1`
+
+		if [ -z $file ]; then
+			message "info" "[INFO] No configuration backup found, skipping..."
+		else
+			message "info" "[INFO] Restore configuration file $file"
+			cp -f $file $SLAPD_CONF		
+		fi
+	fi
+
+	# alert
+	if [ $? -ne 0 ]
+	then
+		message "alert" "[ALERT] OpenLDAP configuration restore failed"
+		exit 1
+	fi
+	message "info" "[OK] Configuration restored"
+}
+
 #====================================================================
 # Action switch
 #====================================================================
@@ -1085,8 +1176,19 @@ case $1 in
 	start_slurpd
 	start_slapd
 	;;
+	backupconfig)
+	backupconfig
+	;;
+	restoreconfig)
+	stop_slapd
+	stop_slurpd
+	restoreconfig
+	configtest
+	start_slurpd
+	start_slapd
+	;;
 	*)
-	echo "Usage: $0 {start|stop|forcestop|restart|debug|force-reload|status|configtest|db_recover|reindex|removelogs|backup|restore}"
+	echo "Usage: $0 {start|stop|forcestop|restart|debug|force-reload|status|configtest|db_recover|reindex|removelogs|backup|restore|backupconfig|restoreconfig}"
 	exit 1
 	;;
 esac
