@@ -920,9 +920,9 @@ backupconfig() {
 		# slapcat
 		if [ -z "$SU" ]
 		then
-			$SLAPCAT_BIN -n0 -l "$file"
+			$SLAPCAT_BIN -n0 -F $SLAPD_CONF_DIR -l "$file"
 		else
-			$SU "$SLAPCAT_BIN -n0" > "$file"
+			$SU "$SLAPCAT_BIN -n0 -F $SLAPD_CONF_DIR" > "$file"
 			chown $SLAPD_USER:$SLAPD_GROUP $file
 		fi
 
