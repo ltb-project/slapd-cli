@@ -287,6 +287,16 @@ fi
 start_slapd() {
 
 	# $1: debug level
+	
+	# Exit 0 if slapd is already running
+	# LSB compliance
+	slapd_status
+	
+	if [ $? -eq 0 ]
+	then 
+		message "info" "[OK] OpenLDAP is already running"
+		exit 0
+	fi   
 
 	# Check if db_recover is required
 	if [ $RECOVER_AT_STARTUP -eq 1 ]
