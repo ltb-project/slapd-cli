@@ -240,7 +240,7 @@ for i in "$SLAPD_BIN" "$SLAPCAT_BIN" "$SLAPINDEX_BIN" "$SLAPTEST_BIN"
 do
 	if [ ! -x $i ]
 	then
-		message "alert" "[ALERT] can't execute $i"
+		message "alert" "[ALERT] Can't execute $i"
 		exit 1
 	fi
 done
@@ -250,7 +250,7 @@ for i in "$SLAPD_CONF"
 do
 	if [ ! -r $i ]
 	then
-		message "alert" "[ALERT] can't read $i"
+		message "alert" "[ALERT] Can't read $i"
 		exit 1
 	fi
 done
@@ -263,21 +263,21 @@ fi
 # Right to execute slurpd, if used
 if [ $SLURPD_ACTIVATE -ne 0 -a ! -x "$SLURPD_BIN" ]
 then
-	message "alert" "[ALERT] can't not execute $SLURPD_BIN"
+	message "alert" "[ALERT] Can't execute $SLURPD_BIN"
 	exit 1
 fi
 
 # Is there a configuration directory ?
 if [ "$SLAPD_CONF_DIR" -a ! -w "$SLAPD_CONF_DIR" ]
 then
-	message "alert" "[ALERT] can't write to configuration directory $SLAPD_CONF_DIR"
+	message "alert" "[ALERT] Can't write to configuration directory $SLAPD_CONF_DIR"
 	exit 1
 fi
 
 # Are you root (for port < 1024)?
 if [ $PORT -lt 1024 -a $MYUID -ne 0 ]
 then
-	message "alert" "[ALERT] only root can launch OpenLDAP on port $PORT"
+	message "alert" "[ALERT] Only root can launch OpenLDAP on port $PORT"
 	exit 1
 fi
 
@@ -303,7 +303,7 @@ start_slapd() {
 	then
 		db_recover
 	else
-		message "info" "[INFO] no db_recover done"	
+		message "info" "[INFO] No db_recover done"	
 	fi
 
 	# Start message
@@ -315,12 +315,12 @@ start_slapd() {
 		ulimit -n $FD_LIMIT
 		if [ $? -eq 0 ]
 		then
-			message "info" "[OK] file descriptor limit set to $FD_LIMIT"
+			message "info" "[OK] File descriptor limit set to $FD_LIMIT"
 		else
 			message "warning" "[WARNING] Fail to set file descriptor limit to $FD_LIMIT, going to next step"
 		fi
 	else
-		message "info" "[INFO] file descriptor limit not modified (require root privileges)"
+		message "info" "[INFO] File descriptor limit not modified (require root privileges)"
 	fi
 
 	# Parameters
@@ -358,7 +358,7 @@ start_slapd() {
 		# Presence of PID file
 		if [ ! -r $SLAPD_PID_FILE ]
 		then
-			message "alert" "[ALERT] no PID file for slapd"
+			message "alert" "[ALERT] No PID file for OpenLDAP"
 			exit 1
 		fi
 
@@ -366,10 +366,10 @@ start_slapd() {
 		PID=`cat $SLAPD_PID_FILE`
 		if [ ! -e /proc/$PID ]
 		then
-			message "alert" "[ALERT] slapd not running"
+			message "alert" "[ALERT] OpenLDAP not running"
 			exit 1
 		else
-			message "info" "[OK] OpenLDAP started on port $PORT and $SSLPORT"
+			message "info" "[OK] OpenLDAP started"
 		fi
 	fi
 }
@@ -404,7 +404,7 @@ start_slurpd() {
 	# Presence of PID file
 	if [ ! -r $SLURPD_PID_FILE ]
 	then
-		message "alert" "[ALERT] no PID file for slurpd"
+		message "alert" "[ALERT] No PID file for slurpd"
 		exit 1
 	fi
 
@@ -426,7 +426,7 @@ stop_slapd() {
 	# Presence of PID file
 	if [ ! -r $SLAPD_PID_FILE ]
 	then
-		message "info" "[INFO] can't read PID file, to stop slapd try: $0 forcestop"
+		message "info" "[INFO] Can't read PID file, to stop OpenLDAP try: $0 forcestop"
 		return 1
 	else
 		PID=`cat $SLAPD_PID_FILE`
@@ -439,7 +439,7 @@ stop_slapd() {
 			if [ $i -eq $TIMEOUT ]
 			then
 				# Timeout
-				message "alert" "[ALERT] slapd still running (PID $PID), try: $0 forcestop"
+				message "alert" "[ALERT] OpenLDAP still running (PID $PID), try: $0 forcestop"
 				exit 1
 			fi
 			i=`expr $i + 1`
@@ -454,7 +454,7 @@ stop_slapd() {
 	then
 		backup
 	else
-		message "info" "[INFO] no data backup done"
+		message "info" "[INFO] No data backup done"
 	fi
 }
 
@@ -471,7 +471,7 @@ stop_slurpd() {
 	# Presence of PID file
 	if [ ! -r $SLURPD_PID_FILE ]
 	then
-		message "warning" "[WARNING] can't read PID file, to stop slurpd try: $0 forcestop"
+		message "warning" "[WARNING] Can't read PID file, to stop slurpd try: $0 forcestop"
 	else
 		PID=`cat $SLURPD_PID_FILE`
 		kill -INT $PID
@@ -507,16 +507,16 @@ forcestop() {
 		# Check if any slapd process are running
 		if [ `$PS_COMMAND | grep $SLAPD_BIN | grep "$slapd_services" | grep -v grep | wc -l` -eq 0 ]
 		then
-			message "info" "[INFO] Found no slapd process running with $SLAPD_SERVICES"
+			message "info" "[INFO] Found no OpenLDAP process running with $SLAPD_SERVICES"
 		else
 			# Try a killall
 			/usr/bin/killall -KILL $SLAPD_BIN
 
 			if [ $? -eq 0 ]
 			then
-				message "info" "[OK] all slapd process killed with force"
+				message "info" "[OK] All OpenLDAP process killed with force"
 			else
-				message "alert" "[ALERT] Unable to kill slapd with force"
+				message "alert" "[ALERT] Unable to kill OpenLDAP with force"
 				exit 1
 			fi
 		fi
@@ -526,9 +526,9 @@ forcestop() {
 
 		if [ $? -eq 0 ]
 		then
-			message "info" "[OK] slapd process killed with force (PID $PID)"
+			message "info" "[OK] OpenLDAP process killed with force (PID $PID)"
 		else
-			message "alert" "[ALERT] Unable to kill slapd with force (PID $PID)"
+			message "alert" "[ALERT] Unable to kill OpenLDAP with force (PID $PID)"
 			exit 1
 		fi
 	fi
@@ -607,17 +607,18 @@ display_status() {
 
 	if [ $status -eq 0 ]
 	then
-		message "info" "[INFO] Process slapd is running"
+		message "info" "[INFO] Process OpenLDAP is running"
+		message "info" "[INFO] Listening to services $SLAPD_SERVICES"
 	fi
 
 	if [ $status -eq 1 ]
 	then
-		message "info" "[INFO] Process slapd is not running"
+		message "info" "[INFO] Process OpenLDAP is not running"
 	fi
 
 	if [ $status -eq 2 ]
 	then
-		message "info" "[INFO] Unable to determine slapd status"
+		message "info" "[INFO] Unable to determine OpenLDAP status"
 	fi
 
 	# Get detected suffix
@@ -691,7 +692,7 @@ db_recover() {
 
 	if [ $? -ne 1 ]
 	then
-		message "alert" "[ALERT] slapd is running or was not correctly shut down, aborting database recovery"
+		message "alert" "[ALERT] OpenLDAP is running or was not correctly shut down, aborting database recovery"
 		exit 1
 	fi
 
@@ -748,7 +749,7 @@ reindex() {
 
 	if [ $? -ne 1 ]
 	then
-		message "alert" "[ALERT] slapd is running or was not correctly shut down, aborting reindexing"
+		message "alert" "[ALERT] OpenLDAP is running or was not correctly shut down, aborting reindexing"
 		exit 1
 	else
 		# slapindex
@@ -775,7 +776,7 @@ removelogs() {
 
 	if [ ! -x $DB_ARCHIVE_BIN ]
 	then
-		message "alert" "[ALERT] Cannot execute $DB_ARCHIVE_BIN, aborting database archiving"
+		message "alert" "[ALERT] Can't execute $DB_ARCHIVE_BIN, aborting database archiving"
 		exit 1
 	fi
 
@@ -785,7 +786,7 @@ removelogs() {
 
 	if [ $? -ne 1 ]
 	then
-		message "alert" "[ALERT] slapd is running or was not correctly shut down, aborting archiving"
+		message "alert" "[ALERT] OpenLDAP is running or was not correctly shut down, aborting archiving"
 		exit 1
 	fi
 
@@ -905,7 +906,7 @@ backup() {
 					message "alert" "[ALERT] OpenLDAP database backup compression failed"
 					exit 1
 				fi
-				message "info" "[OK] data saved in ${file}.$BACKUP_COMPRESS_EXT"
+				message "info" "[OK] Data saved in ${file}.$BACKUP_COMPRESS_EXT"
 			fi
 		fi
 
