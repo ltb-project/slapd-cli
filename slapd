@@ -5,7 +5,7 @@
 # (http://www.openldap.org).
 # Use BerkeleyDB utilities and save data in LDIF format.
 # 
-# chkconfig: 2345 85 15
+# chkconfig: 2345 27 73
 # description: OpenLDAP
 #
 ### BEGIN INIT INFO
@@ -45,7 +45,7 @@
 #====================================================================
 # Version
 #====================================================================
-VERSION="1.4"
+VERSION="1.5"
 
 #====================================================================
 # Default parameters (if /etc/default/{script_name} is not present)
