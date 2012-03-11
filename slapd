@@ -248,7 +248,7 @@ done
 # Rights to read files
 for i in "$SLAPD_CONF"
 do
-	if [ ! -r $i ]
+	if [ ! -r $i -a ! -d "$SLAPD_CONF_DIR" ]
 	then
 		message "alert" "[ALERT] Can't read $i"
 		exit 1
@@ -256,7 +256,7 @@ do
 done
 
 # Activate slurpd? (get from configuration file)
-if [ -n "$SLAPD_CONF" ]; then
+if [ -n "$SLAPD_CONF" -a ! -d "$SLAPD_CONF_DIR" ]; then
 	SLURPD_ACTIVATE=`grep "^replica" $SLAPD_CONF | wc -l`
 fi
 
