@@ -245,15 +245,12 @@ do
 	fi
 done
 
-# Rights to read files
-for i in "$SLAPD_CONF"
-do
-	if [ ! -r $i -a ! -d "$SLAPD_CONF_DIR" ]
-	then
-		message "alert" "[ALERT] Can't read $i"
-		exit 1
-	fi
-done
+# Rights to read configuration
+if [ "$SLAPD_CONF" -a ! -r "$SLAPD_CONF" ]
+then
+	message "alert" "[ALERT] Can't read $SLAPD_CONF"
+	exit 1
+fi
 
 # Activate slurpd? (get from configuration file)
 if [ -n "$SLAPD_CONF" -a ! -d "$SLAPD_CONF_DIR" ]; then
