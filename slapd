@@ -144,7 +144,7 @@ get_confvalues() {
 		backconfig_get_values "olcDbDirectory"
 	;;
 	suffix)
-		backconfig_get_values "olcSuffix" "(|(objectclass=olcBdbConfig)(objectclass=olcHdbConfig))"
+		backconfig_get_values "olcSuffix" "(|(objectclass=olcBdbConfig)(objectclass=olcHdbConfig)(objectclass=olcMdbConfig))"
 	;;
         *)
 		RETVAL=""
