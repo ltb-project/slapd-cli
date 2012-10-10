@@ -605,8 +605,17 @@ display_status() {
 
 	if [ $status -eq 0 ]
 	then
-		message "info" "[INFO] Process OpenLDAP is running"
+		PID=`cat $SLAPD_PID_FILE`
+
+		message "info" "[INFO] Process OpenLDAP is running (PID $PID)"
 		message "info" "[INFO] Listening to services $SLAPD_SERVICES"
+
+		CPU=`ps -p $PID -o %cpu=`
+		MEM=`ps -p $PID -o %mem=`
+
+		message "info" "[INFO] Process usage: $CPU% CPU / $MEM% MEM"
+
+
 	fi
 
 	if [ $status -eq 1 ]
