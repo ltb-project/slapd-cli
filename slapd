@@ -71,6 +71,7 @@ SLAPD_SYSLOG_LOCAL_USER="local4"
 DATA_PATH="$SLAPD_PATH/var/openldap-data"
 
 SLAPADD_BIN="$SLAPD_PATH/sbin/slapadd"
+SLAPADD_PARAMS="-q"
 SLAPCAT_BIN="$SLAPD_PATH/sbin/slapcat"
 SLAPINDEX_BIN="$SLAPD_PATH/sbin/slapindex"
 SLAPTEST_BIN="$SLAPD_PATH/sbin/slaptest"
@@ -957,10 +958,10 @@ restore() {
 
 	if [ "$SLAPD_CONF_DIR" ]
 	then
-		SLAPADD_PARAMS="-F $SLAPD_CONF_DIR"
+		SLAPADD_PARAMS="$SLAPADD_PARAMS -F $SLAPD_CONF_DIR"
 	elif [ "$SLAPD_CONF" ]
 	then
-		SLAPADD_PARAMS="-f $SLAPD_CONF"
+		SLAPADD_PARAMS="$SLAPADD_PARAMS -f $SLAPD_CONF"
 	fi
 
 	# Do restore for all databases

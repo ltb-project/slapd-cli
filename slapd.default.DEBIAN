@@ -23,6 +23,7 @@ SLAPD_SYSLOG_LOCAL_USER="local4"
 DATA_PATH="auto"
 
 SLAPADD_BIN="/usr/sbin/slapadd"
+SLAPADD_PARAMS="-q"
 SLAPCAT_BIN="/usr/sbin/slapcat"
 SLAPINDEX_BIN="/usr/sbin/slapindex"
 SLAPTEST_BIN="/usr/sbin/slaptest"
