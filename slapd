@@ -883,13 +883,15 @@ backup() {
 			if [ -z "$SU" ]
 			then
 				$SLAPCAT_BIN -b "$sufprint" $SLAPCAT_PARAMS -l "$file"
+				ret=$?
 			else
 				$SU "$SLAPCAT_BIN -b \"$sufprint\" $SLAPCAT_PARAMS" > "$file"
+				ret=$?
 				chown $SLAPD_USER:$SLAPD_GROUP $file
 			fi
 
 			# alert
-			if [ $? -ne 0 ]
+			if [ $ret -ne 0 ]
 			then
 				message "alert" "[ALERT] OpenLDAP database backup failed"
 				exit 1
@@ -939,8 +941,10 @@ backupconfig() {
 		if [ -z "$SU" ]
 		then
 			$SLAPCAT_BIN -n0 -F $SLAPD_CONF_DIR -l "$file"
+			ret=$?
 		else
 			$SU "$SLAPCAT_BIN -n0 -F $SLAPD_CONF_DIR" > "$file"
+			ret=$?
 			chown $SLAPD_USER:$SLAPD_GROUP $file
 		fi
 
@@ -948,10 +952,11 @@ backupconfig() {
 	then
 		file="$BACKUP_PATH/slapd-`date +%Y%m%d%H%M%S`.conf"
 		cp $SLAPD_CONF $file
+		ret=$?
 	fi
 
 	# alert
-	if [ $? -ne 0 ]
+	if [ $ret -ne 0 ]
 	then
 		message "alert" "[ALERT] OpenLDAP configuration backup failed"
 		exit 1
