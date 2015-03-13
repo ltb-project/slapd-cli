@@ -50,5 +50,4 @@ BACKUP_UNCOMPRESS_BIN="" # /bin/gunzip, /bin/bunzip2, ...
 TIMEOUT="30" # Max time to stop process
 FD_LIMIT="1024" # Max file descriptor
 DEBUG_LEVEL="256" # Debug loglevel
-SPECIAL_QUOTE="0" # Quote some command line parameters (eg: LDAP filters)
 
