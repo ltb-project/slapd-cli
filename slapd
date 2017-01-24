@@ -45,7 +45,7 @@
 #====================================================================
 # Version
 #====================================================================
-VERSION="2.1"
+VERSION="2.2"
 
 #====================================================================
 # Default parameters (if /etc/default/{script_name} is not present)
@@ -55,6 +55,8 @@ IP="*"
 SSLIP="*"
 PORT="389"
 SSLPORT="636"
+LDAPI_SOCKETDIR=""
+LDAPI_SOCKETURL=""
 
 # OpenLDAP directory and files
 SLAPD_PATH="/usr/local/openldap"
@@ -276,6 +278,15 @@ if [ $PORT -lt 1024 -a $MYUID -ne 0 ]
 then
 	message "alert" "[ALERT] Only root can launch OpenLDAP on port $PORT"
 	exit 1
+fi
+
+# Create LDAPI socket
+if [ "$LDAPI_SOCKETDIR" -a ! -r "$LDAPI_SOCKETDIR" ]
+then
+    message "info" "[INFO] Create LDAPI socket dir $LDAPI_SOCKETDIR"
+    mkdir -p "$LDAPI_SOCKETDIR"
+    [ -z "$SLAPD_USER" ] || chown -R "$SLAPD_USER" "$LDAPI_SOCKETDIR"
+    [ -z "$SLAPD_GROUP" ] || chgrp -R "$SLAPD_GROUP" "$LDAPI_SOCKETDIR"
 fi
 
 #====================================================================
