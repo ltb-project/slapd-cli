@@ -20,6 +20,7 @@
 # Description:       OpenLDAP init script provided by LTB-project.org
 ### END INIT INFO
 #
+# Copyright (C) 2017 David COUTADEUR
 # Copyright (C) 2008 Jonathan CLARKE
 # Copyright (C) 2007 Olivier LI-KIANG-CHEONG
 # Copyright (C) 2007 Thomas CHEMINEAU
@@ -108,6 +109,7 @@ OS=`uname -s`   # To adapt message printing
 MYUID=`id -u`     # For UNIX compatibility => modify this command
 MYGID=`id -g`     # For UNIX compatibility => modify this command
 PS_COMMAND="ps -efww"	# This ensures full width for ps output but doesn't work on Solaris - use "ps -ef"
+declare -a PROVIDER
 
 # Return functions' value
 RETVAL=""
@@ -1147,6 +1149,60 @@ restoreconfig() {
 	message "info" "[OK] Configuration restored"
 }
 
+get_provider_config() {
+	i=0
+	if [ "$SLAPD_CONF_DIR" ]
+	then
+		PROVIDERS=$( $SLAPCAT_BIN -n0 -o ldif-wrap=no | grep -E '^olcSyncrepl' )
+		while echo $PROVIDERS | grep -q -E '^olcSyncrepl'
+		do
+			# deletes first syncrepl keyword
+			PROVIDERS=$( echo $PROVIDERS | sed -e 's/^olcSyncrepl//' )
+			# store first provider found
+			PROVIDER[$i]=$( echo $PROVIDERS | sed -e 's/olcSyncrepl.*$//' )
+			# delete first provider from list of providers
+			PROVIDERS=$( echo $PROVIDERS | sed -e 's/^.*\(olcSyncrepl.*\)$/\1/')
+
+			i=$[i+1]
+		done
+
+	elif [ "$SLAPD_CONF" ]
+	then
+		PROVIDERS=$( sed -n '/^syncrepl/,/^[^ \t]/p' $SLAPD_CONF )
+		while echo $PROVIDERS | grep -q -E '^syncrepl'
+		do
+			# deletes first syncrepl keyword
+			PROVIDERS=$( echo $PROVIDERS | sed -e 's/^syncrepl//' )
+			# store first provider found
+			PROVIDER[$i]=$( echo $PROVIDERS | sed -e 's/syncrepl.*$//' )
+			# delete first provider from list of providers
+			PROVIDERS=$( echo $PROVIDERS | sed -e 's/^.*\(syncrepl.*\)$/\1/')
+
+			i=$[i+1]
+		done
+	fi
+}
+
+check_sync() {
+	message "info" "[INFO] Checking synchronization..."
+	get_provider_config
+	# check if PROVIDER array has at least 1 element, else nothing to check...
+	# TODO
+	for index in "${!PROVIDER[@]}"
+	do
+		echo "$index ${PROVIDER[index]}"
+		# get contextCSN with provider config parameters
+		# TODO
+		# get local contextCSN
+		# TODO
+		# compare contextCSN values
+		# TODO
+		# return result (OK|KO +values)
+		# TODO
+	done
+	message "info" "[OK] Checking synchronization"
+}
+
 #====================================================================
 # Action switch
 #====================================================================
@@ -1218,8 +1274,11 @@ case $1 in
 	start_slurpd
 	start_slapd
 	;;
+	checksync)
+	check_sync
+	;;
 	*)
-	echo "Usage: $0 {start|stop|forcestop|restart|debug|force-reload|status|configtest|db_recover|reindex|removelogs|backup|restore|backupconfig|restoreconfig}"
+	echo "Usage: $0 {start|stop|forcestop|restart|debug|force-reload|status|configtest|db_recover|reindex|removelogs|backup|restore|backupconfig|restoreconfig|checksync}"
 	exit 1
 	;;
 esac
