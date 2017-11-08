@@ -1153,6 +1153,7 @@ get_provider_config() {
 	i=0
 	if [ "$SLAPD_CONF_DIR" ]
 	then
+		# Get list of provider
 		PROVIDERS=$( $SLAPCAT_BIN -n0 -o ldif-wrap=no | grep -E '^olcSyncrepl' )
 		while echo $PROVIDERS | grep -q -E '^olcSyncrepl'
 		do
@@ -1161,13 +1162,14 @@ get_provider_config() {
 			# store first provider found
 			PROVIDER[$i]=$( echo $PROVIDERS | sed -e 's/olcSyncrepl.*$//' )
 			# delete first provider from list of providers
-			PROVIDERS=$( echo $PROVIDERS | sed -e 's/^.*\(olcSyncrepl.*\)$/\1/')
+			PROVIDERS=$( echo $PROVIDERS | sed -e 's/^.*\(olcSyncrepl.*\)$/\1/' )
 
 			i=$[i+1]
 		done
 
 	elif [ "$SLAPD_CONF" ]
 	then
+		# Get list of provider
 		PROVIDERS=$( sed -n '/^syncrepl/,/^[^ \t]/p' $SLAPD_CONF )
 		while echo $PROVIDERS | grep -q -E '^syncrepl'
 		do
@@ -1186,14 +1188,21 @@ get_provider_config() {
 check_sync() {
 	message "info" "[INFO] Checking synchronization..."
 	get_provider_config
-	# check if PROVIDER array has at least 1 element, else nothing to check...
-	# TODO
+	get_confvalues "suffix"
+	SUFFIX=$RETVAL
+	RES=0 # result OK by default (if nothing to check, sync=OK)
+
+	# Parse PROVIDERS
 	for index in "${!PROVIDER[@]}"
 	do
 		echo "$index ${PROVIDER[index]}"
 		# get contextCSN with provider config parameters
 		# TODO
 		# get local contextCSN
+		# TODO: improve this test to check via ldapsearch (need manager account)
+		localContextCSN=$( $SLAPCAT_BIN -b $SUFFIX -o ldif-wrap=no 2>/dev/null | head -n 100 | sed -e '/^$/,$d' | grep 'contextCSN' | sed -e 's/^contextCSN: //' )
+echo "localContextCSN: $localContextCSN"
+
 		# TODO
 		# compare contextCSN values
 		# TODO
@@ -1201,6 +1210,7 @@ check_sync() {
 		# TODO
 	done
 	message "info" "[OK] Checking synchronization"
+	exit $RES
 }
 
 #====================================================================
