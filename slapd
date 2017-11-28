@@ -1196,8 +1196,14 @@ check_sync() {
 	for index in "${!PROVIDER[@]}"
 	do
 		echo "$index ${PROVIDER[index]}"
-		# get contextCSN with provider config parameters
-		# TODO
+		# get CONTEXTCSN with provider config parameters
+		PHOST=$( echo "$index ${PROVIDER[index]}" | sed -e 's/.*provider[ \t]*=[ \t]*\([^ \t]\+\).*$/\1/' | sed -e 's/["]//g' | sed -e "s/[']//g" )
+		PBINDDN=$( echo "$index ${PROVIDER[index]}" | sed -e 's/.*binddn[ \t]*=[ \t]*\([^ \t]\+\).*$/\1/' | sed -e 's/["]//g' | sed -e "s/[']//g" )
+		PBINDPW=$( echo "$index ${PROVIDER[index]}" | sed -e 's/.*credentials[ \t]*=[ \t]*\([^ \t]\+\).*$/\1/' | sed -e 's/["]//g' | sed -e "s/[']//g" )
+		PBASEDN=$( echo "$index ${PROVIDER[index]}" | sed -e 's/.*searchbase[ \t]*=[ \t]*\([^ \t]\+\).*$/\1/' | sed -e 's/["]//g' | sed -e "s/[']//g" )
+		CONTEXTCSN=$( ${SLAPD_PATH}/bin/ldapsearch -x -H "${PHOST}" -D "${PBINDDN}" -w "${PBINDPW}" -b "${PBASEDN}" -s base contextCSN | grep contextCSN | sed -e 's/^contextCSN: //i' )
+		echo "CONTEXTCSN: ${CONTEXTCSN}"
+
 		# get local contextCSN
 		# TODO: improve this test to check via ldapsearch (need manager account)
 		localContextCSN=$( $SLAPCAT_BIN -b $SUFFIX -o ldif-wrap=no 2>/dev/null | head -n 100 | sed -e '/^$/,$d' | grep 'contextCSN' | sed -e 's/^contextCSN: //' )
@@ -1205,9 +1211,15 @@ echo "localContextCSN: $localContextCSN"
 
 		# TODO
 		# compare contextCSN values
+		# foreach contextCSN
+		#  identify rid part
+		#  contextCSN = 20171128170017.708386Z#000000#001#000000
+		#                                             ^^^
+		#  find corresponding localContextCSN
+		#  compare results
+
 		# TODO
 		# return result (OK|KO +values)
-		# TODO
 	done
 	message "info" "[OK] Checking synchronization"
 	exit $RES
