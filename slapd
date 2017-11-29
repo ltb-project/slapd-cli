@@ -1195,33 +1195,52 @@ check_sync() {
 	# Parse PROVIDERS
 	for index in "${!PROVIDER[@]}"
 	do
-		echo "$index ${PROVIDER[index]}"
-		# get CONTEXTCSN with provider config parameters
-		PHOST=$( echo "$index ${PROVIDER[index]}" | sed -e 's/.*provider[ \t]*=[ \t]*\([^ \t]\+\).*$/\1/' | sed -e 's/["]//g' | sed -e "s/[']//g" )
-		PBINDDN=$( echo "$index ${PROVIDER[index]}" | sed -e 's/.*binddn[ \t]*=[ \t]*\([^ \t]\+\).*$/\1/' | sed -e 's/["]//g' | sed -e "s/[']//g" )
-		PBINDPW=$( echo "$index ${PROVIDER[index]}" | sed -e 's/.*credentials[ \t]*=[ \t]*\([^ \t]\+\).*$/\1/' | sed -e 's/["]//g' | sed -e "s/[']//g" )
-		PBASEDN=$( echo "$index ${PROVIDER[index]}" | sed -e 's/.*searchbase[ \t]*=[ \t]*\([^ \t]\+\).*$/\1/' | sed -e 's/["]//g' | sed -e "s/[']//g" )
-		CONTEXTCSN=$( ${SLAPD_PATH}/bin/ldapsearch -x -H "${PHOST}" -D "${PBINDDN}" -w "${PBINDPW}" -b "${PBASEDN}" -s base contextCSN | grep contextCSN | sed -e 's/^contextCSN: //i' )
-		echo "CONTEXTCSN: ${CONTEXTCSN}"
+		PROVIDER[$index]=$( echo "${PROVIDER[index]}" | sed -e 's/#.*$//g' )
+		# get provider config parameters
+		PHOST=$( echo "${PROVIDER[$index]}" | sed -e 's/.*provider[ \t]*=[ \t]*\([^ \t]\+\).*$/\1/' | sed -e 's/["]//g' | sed -e "s/[']//g" )
+		PBINDDN=$( echo "${PROVIDER[$index]}" | sed -e 's/.*binddn[ \t]*=[ \t]*\([^ \t]\+\).*$/\1/' | sed -e 's/["]//g' | sed -e "s/[']//g" )
+		PBINDPW=$( echo "${PROVIDER[$index]}" | sed -e 's/.*credentials[ \t]*=[ \t]*\([^ \t]\+\).*$/\1/' | sed -e 's/["]//g' | sed -e "s/[']//g" )
+		PBASEDN=$( echo "${PROVIDER[$index]}" | sed -e 's/.*searchbase[ \t]*=[ \t]*\([^ \t]\+\).*$/\1/' | sed -e 's/["]//g' | sed -e "s/[']//g" )
+		# Get remote provider contextCSN (one contextCSN per line)
+		CONTEXTCSN=$( ${SLAPD_PATH}/bin/ldapsearch -x -H "${PHOST}" -D "${PBINDDN}" -w "${PBINDPW}" -b "${PBASEDN}" -s base contextCSN -LLL | grep contextCSN | sed -e 's/^contextCSN: //i' )
 
 		# get local contextCSN
 		# TODO: improve this test to check via ldapsearch (need manager account)
 		localContextCSN=$( $SLAPCAT_BIN -b $SUFFIX -o ldif-wrap=no 2>/dev/null | head -n 100 | sed -e '/^$/,$d' | grep 'contextCSN' | sed -e 's/^contextCSN: //' )
-echo "localContextCSN: $localContextCSN"
 
-		# TODO
 		# compare contextCSN values
-		# foreach contextCSN
-		#  identify rid part
-		#  contextCSN = 20171128170017.708386Z#000000#001#000000
-		#                                             ^^^
-		#  find corresponding localContextCSN
-		#  compare results
+		# for each provider contextCSN
+		for CSN in $CONTEXTCSN; do
+			#  identify rid part
+			#  contextCSN = 20171128170017.708386Z#000000#001#000000
+			#                                             ^^^
+			RID=$( echo ${CSN} | sed -e 's/^.*\(#[0-9]\+#\)[^#]*$/\1/' )
+			
+			#  check matching local slave ContextCSN
+			if echo "$localContextCSN" | grep -q "$RID" ; then
+				# get corresponding local slave contextCSN
+				matchingLocalContextCSN=$( echo -e "$localContextCSN" | grep "$RID" )
+				# Check if corresponding local slave contextCSN is identical to remote provider contextCSN
+				if echo "$matchingLocalContextCSN" | grep -q "$CSN" ; then
+					#remote ($CSN) and local ($matchingLocalContextCSN) contextCSN found and synchronized -> OK
+					: # do nothing
+				else
+					echo "remote ($CSN) and local ($matchingLocalContextCSN) contextCSN found, but not synchronized!"
+					let "RES=RES+1"
+				fi
+			else
+				echo "no matching local contextCSN ($localContextCSN) found for remote ($CSN) contextCSN!"
+				let "RES=RES+1"
+			fi
+		done
 
-		# TODO
-		# return result (OK|KO +values)
+		# return result (OK|KO)
 	done
-	message "info" "[OK] Checking synchronization"
+	if [[ $RES -eq 0 ]]; then
+		message "info" "[OK] Local directory synchronized to every declared provider"
+	else
+		message "error" "[KO] Local directory not synchronized to one of its declared providers"
+	fi
 	exit $RES
 }
 
