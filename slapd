@@ -1206,7 +1206,14 @@ check_sync() {
 
 		# get local contextCSN
 		# TODO: improve this test to check via ldapsearch (need manager account)
-		localContextCSN=$( $SLAPCAT_BIN -b $SUFFIX -o ldif-wrap=no 2>/dev/null | head -n 100 | sed -e '/^$/,$d' | grep 'contextCSN' | sed -e 's/^contextCSN: //' )
+		if [ "$SLAPD_CONF_DIR" ]; then
+			localContextCSN=$( $SLAPCAT_BIN -b $SUFFIX -F "$SLAPD_CONF_DIR" -o ldif-wrap=no 2>/dev/null | head -n 100 | sed -e '/^$/,$d' | grep 'contextCSN' | sed -e 's/^contextCSN: //' )
+		elif [ "$SLAPD_CONF" ]; then
+			localContextCSN=$( $SLAPCAT_BIN -b $SUFFIX -f "$SLAPD_CONF" -o ldif-wrap=no 2>/dev/null | head -n 100 | sed -e '/^$/,$d' | grep 'contextCSN' | sed -e 's/^contextCSN: //' )
+		else
+			echo "No acceptable configuration found"
+			exit 1
+		fi
 
 		# compare contextCSN values
 		# for each provider contextCSN
