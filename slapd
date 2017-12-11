@@ -1154,7 +1154,7 @@ get_provider_config() {
 	if [ "$SLAPD_CONF_DIR" ]
 	then
 		# Get list of provider
-		PROVIDERS=$( $SLAPCAT_BIN -n0 -o ldif-wrap=no | grep -E '^olcSyncrepl' )
+		PROVIDERS=$( $SLAPCAT_BIN -n0 -F "$SLAPD_CONF_DIR" -o ldif-wrap=no | grep -E '^olcSyncrepl' )
 		while echo $PROVIDERS | grep -q -E '^olcSyncrepl'
 		do
 			# deletes first syncrepl keyword
