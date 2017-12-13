@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 #====================================================================
 # Start/stop script for OpenLDAP (2.2 minimum)
