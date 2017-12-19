@@ -1201,6 +1201,7 @@ check_sync() {
 		PBINDDN=$( echo "${PROVIDER[$index]}" | sed -e 's/.*binddn[ \t]*=[ \t]*\([^ \t]\+\).*$/\1/' | sed -e 's/["]//g' | sed -e "s/[']//g" )
 		PBINDPW=$( echo "${PROVIDER[$index]}" | sed -e 's/.*credentials[ \t]*=[ \t]*\([^ \t]\+\).*$/\1/' | sed -e 's/["]//g' | sed -e "s/[']//g" )
 		PBASEDN=$( echo "${PROVIDER[$index]}" | sed -e 's/.*searchbase[ \t]*=[ \t]*\([^ \t]\+\).*$/\1/' | sed -e 's/["]//g' | sed -e "s/[']//g" )
+		echo "Checking host ${PHOST}"
 		# Get remote provider contextCSN (one contextCSN per line)
 		CONTEXTCSN=$( ${SLAPD_PATH}/bin/ldapsearch -x -H "${PHOST}" -D "${PBINDDN}" -w "${PBINDPW}" -b "${PBASEDN}" -s base contextCSN -LLL | grep contextCSN | sed -e 's/^contextCSN: //i' )
 
@@ -1218,25 +1219,25 @@ check_sync() {
 		# compare contextCSN values
 		# for each provider contextCSN
 		for CSN in $CONTEXTCSN; do
-			#  identify rid part
+			#  identify sid part
 			#  contextCSN = 20171128170017.708386Z#000000#001#000000
 			#                                             ^^^
-			RID=$( echo ${CSN} | sed -e 's/^.*\(#[0-9]\+#\)[^#]*$/\1/' )
+			SID=$( echo ${CSN} | sed -e 's/^.*\(#[0-9]\+#\)[^#]*$/\1/' )
+			echo "  Checking SID ${SID}"
 			
 			#  check matching local slave ContextCSN
-			if echo "$localContextCSN" | grep -q "$RID" ; then
+			if echo "$localContextCSN" | grep -q "$SID" ; then
 				# get corresponding local slave contextCSN
-				matchingLocalContextCSN=$( echo -e "$localContextCSN" | grep "$RID" )
+				matchingLocalContextCSN=$( echo -e "$localContextCSN" | grep "$SID" )
 				# Check if corresponding local slave contextCSN is identical to remote provider contextCSN
 				if echo "$matchingLocalContextCSN" | grep -q "$CSN" ; then
-					#remote ($CSN) and local ($matchingLocalContextCSN) contextCSN found and synchronized -> OK
-					: # do nothing
+					echo "    INFO: remote ($CSN) and local ($matchingLocalContextCSN) contextCSN found and synchronized"
 				else
-					echo "remote ($CSN) and local ($matchingLocalContextCSN) contextCSN found, but not synchronized!"
+					echo "    ERROR: remote ($CSN) and local ($matchingLocalContextCSN) contextCSN found, but not synchronized!"
 					let "RES=RES+1"
 				fi
 			else
-				echo "no matching local contextCSN ($localContextCSN) found for remote ($CSN) contextCSN!"
+				echo "    ERROR: no matching local contextCSN ($localContextCSN) found for remote ($CSN) contextCSN!"
 				let "RES=RES+1"
 			fi
 		done
