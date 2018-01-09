@@ -1192,6 +1192,12 @@ check_sync() {
 	SUFFIX=$RETVAL
 	RES=0 # result OK by default (if nothing to check, sync=OK)
 
+	# Is there any provider configuration?
+	if [[ ${#PROVIDER[@]} -eq "0" ]]; then
+		message "info" "[OK] No provider found in configuration - sync status not checked"
+		exit $RES
+	fi
+
 	# Parse PROVIDERS
 	for index in "${!PROVIDER[@]}"
 	do
