@@ -1,24 +1,11 @@
 #!/bin/bash
 
 #====================================================================
-# Start/stop script for OpenLDAP (2.2 minimum)
+# CLI script for OpenLDAP
 # (http://www.openldap.org).
-# Use BerkeleyDB utilities and save data in LDIF format.
 # 
 # chkconfig: 2345 27 73
 # description: OpenLDAP
-#
-### BEGIN INIT INFO
-# Provides:          slapd
-# Required-Start:    $remote_fs $syslog
-# Required-Stop:     $remote_fs $syslog
-# Should-Start:      $network $time
-# Should-Stop:       $network $time
-# Default-Start:     2 3 4 5
-# Default-Stop:      0 1 6
-# Short-Description: OpenLDAP
-# Description:       OpenLDAP init script provided by LTB-project.org
-### END INIT INFO
 #
 # Copyright (C) 2017 David COUTADEUR
 # Copyright (C) 2008 Jonathan CLARKE
@@ -46,11 +33,14 @@
 #====================================================================
 # Version
 #====================================================================
-VERSION="2.2"
+VERSION="2.3"
 
 #====================================================================
-# Default parameters (if /etc/default/{script_name} is not present)
+# Default parameters (unless /usr/local/openldap/etc/openldap/slapd-cli.conf)
 #====================================================================
+# CLI configuration file
+CLI_CONF_FILE="/usr/local/openldap/etc/openldap/slapd-cli.conf"
+
 # IP and port to listen (use wildcard * in IP to listen on all interfaces)
 IP="*"
 SSLIP="*"
@@ -211,10 +201,10 @@ backconfig_get_values() {
 #====================================================================
 # Load specific parameters
 #====================================================================
-if [ -f /etc/default/$PROG_NAME ]
+if [ -f ${CLI_CONF_FILE} ]
 then
-	. /etc/default/$PROG_NAME
-	message "info" "[INFO] Using /etc/default/$PROG_NAME for configuration"
+	. ${CLI_CONF_FILE}
+	message "info" "[INFO] Using ${CLI_CONF_FILE} for configuration"
 else
 	message "info" "[INFO] Using built-in configuration - this may cause some problems"
 fi
