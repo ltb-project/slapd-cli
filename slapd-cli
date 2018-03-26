@@ -36,11 +36,8 @@
 VERSION="2.3"
 
 #====================================================================
-# Default parameters (unless /usr/local/openldap/etc/openldap/slapd-cli.conf)
+# Default parameters (unless /usr/local/openldap/etc/openldap/{script_name}.conf)
 #====================================================================
-# CLI configuration file
-CLI_CONF_FILE="/usr/local/openldap/etc/openldap/slapd-cli.conf"
-
 # IP and port to listen (use wildcard * in IP to listen on all interfaces)
 IP="*"
 SSLIP="*"
@@ -201,6 +198,7 @@ backconfig_get_values() {
 #====================================================================
 # Load specific parameters
 #====================================================================
+CLI_CONF_FILE=/usr/local/openldap/etc/openldap/${PROG_NAME}.conf
 if [ -f ${CLI_CONF_FILE} ]
 then
 	. ${CLI_CONF_FILE}
