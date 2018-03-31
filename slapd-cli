@@ -668,12 +668,7 @@ configtest() {
 	fi
 
 	# slaptest
-	if [ -z "$SU" ]
-	then
-		$SLAPTEST_BIN $SLAPTEST_PARAMS > /dev/null 2>&1
-	else
-		$SU "$SLAPTEST_BIN $SLAPTEST_PARAMS > /dev/null 2>&1"
-	fi
+	$SLAPTEST_BIN $SLAPTEST_PARAMS > /dev/null 2>&1
 
 	if [ $? -eq 0 ]
 	then
