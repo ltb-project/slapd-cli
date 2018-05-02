@@ -1153,7 +1153,7 @@ get_provider_config() {
 	elif [ "$SLAPD_CONF" ]
 	then
 		# Get list of provider
-		PROVIDERS=$( sed -n '/^syncrepl/,/^[^ \t]/p' $SLAPD_CONF )
+		PROVIDERS=$( sed -n '/^syncrepl/,/^([^ \t]|$)/p' $SLAPD_CONF )
 		while echo $PROVIDERS | grep -q -E '^syncrepl'
 		do
 			# deletes first syncrepl keyword
