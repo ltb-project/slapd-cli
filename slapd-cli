@@ -63,6 +63,7 @@ DATA_PATH="$SLAPD_PATH/var/openldap-data"
 SLAPADD_BIN="$SLAPD_PATH/sbin/slapadd"
 SLAPADD_PARAMS="-q"
 SLAPCAT_BIN="$SLAPD_PATH/sbin/slapcat"
+SLAPCAT_PARAMS="-o ldif-wrap=no"
 SLAPINDEX_BIN="$SLAPD_PATH/sbin/slapindex"
 SLAPTEST_BIN="$SLAPD_PATH/sbin/slaptest"
 
@@ -171,7 +172,7 @@ backconfig_get_values() {
 		return
 	fi
 
-	slapcat_cmd="$SLAPCAT_BIN -F $SLAPD_CONF_DIR -b cn=config"
+	slapcat_cmd="$SLAPCAT_BIN $SLAPCAT_PARAMS -F $SLAPD_CONF_DIR -b cn=config"
 	if [ -n "$2" ]
 	then
 		if [ -n "$SU" ]; then
@@ -837,10 +838,10 @@ backup() {
 
 	if [ "$SLAPD_CONF_DIR" ]
 	then
-		SLAPCAT_PARAMS="-F $SLAPD_CONF_DIR"
+		SLAPCAT_PARAMS="$SLAPCAT_PARAMS -F $SLAPD_CONF_DIR"
 	elif [ "$SLAPD_CONF" ]
 	then
-		SLAPCAT_PARAMS="-f $SLAPD_CONF"
+		SLAPCAT_PARAMS="$SLAPCAT_PARAMS -f $SLAPD_CONF"
 	fi
 
 	# Do backup for all databases
@@ -934,10 +935,10 @@ backupconfig() {
 		# slapcat
 		if [ -z "$SU" ]
 		then
-			$SLAPCAT_BIN -n0 -F $SLAPD_CONF_DIR -l "$file"
+			$SLAPCAT_BIN $SLAPCAT_PARAMS -n0 -F $SLAPD_CONF_DIR -l "$file"
 			ret=$?
 		else
-			$SU "$SLAPCAT_BIN -n0 -F $SLAPD_CONF_DIR" > "$file"
+			$SU "$SLAPCAT_BIN $SLAPCAT_PARAMS -n0 -F $SLAPD_CONF_DIR" > "$file"
 			ret=$?
 			chown $SLAPD_USER:$SLAPD_GROUP $file
 		fi
