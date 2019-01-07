@@ -195,6 +195,25 @@ backconfig_get_values() {
 	fi
 }
 
+syncrepl_get_value() {
+	# $1: syncrepl value
+	# $2: parameter in syncrepl value
+	# $RETVAL: value
+
+	syncrepl=$1
+	parameter=$2
+
+	# Check if parameter value is surrounded with quotes
+	echo "$1" | grep -e $2'="' > /dev/null
+	noquotes=$?
+
+	if [ $noquotes -gt 0 ]
+	then
+		RETVAL=$( echo "$1" | sed -e 's/.*'$2'[ \t]*=[ \t]*\([^ \t]\+\).*$/\1/' | sed -e 's/["]//g' | sed -e "s/[']//g")
+	else
+		RETVAL=$( echo "$1" | sed -e 's/.*'$2'[ \t]*=[ \t]*"\([^"\t]\+\)".*$/\1/' | sed -e 's/["]//g' | sed -e "s/[']//g");
+	fi
+}
 
 #====================================================================
 # Load specific parameters
@@ -1187,10 +1206,14 @@ check_sync() {
 	do
 		PROVIDER[$index]=$( echo "${PROVIDER[index]}" | sed -e 's/#.*$//g' )
 		# get provider config parameters
-		PHOST=$( echo "${PROVIDER[$index]}" | sed -e 's/.*provider[ \t]*=[ \t]*\([^ \t]\+\).*$/\1/' | sed -e 's/["]//g' | sed -e "s/[']//g" )
-		PBINDDN=$( echo "${PROVIDER[$index]}" | sed -e 's/.*binddn[ \t]*=[ \t]*\([^ \t]\+\).*$/\1/' | sed -e 's/["]//g' | sed -e "s/[']//g" )
-		PBINDPW=$( echo "${PROVIDER[$index]}" | sed -e 's/.*credentials[ \t]*=[ \t]*\([^ \t]\+\).*$/\1/' | sed -e 's/["]//g' | sed -e "s/[']//g" )
-		PBASEDN=$( echo "${PROVIDER[$index]}" | sed -e 's/.*searchbase[ \t]*=[ \t]*\([^ \t]\+\).*$/\1/' | sed -e 's/["]//g' | sed -e "s/[']//g" )
+		syncrepl_get_value "${PROVIDER[$index]}" "provider"
+		PHOST=$RETVAL
+		syncrepl_get_value "${PROVIDER[$index]}" "binddn"
+		PBINDDN=$RETVAL
+		syncrepl_get_value "${PROVIDER[$index]}" "credentials"
+		PBINDPW=$RETVAL
+		syncrepl_get_value "${PROVIDER[$index]}" "searchbase"
+		PBASEDN=$RETVAL
 		echo "Checking host ${PHOST}"
 		# Get remote provider contextCSN (one contextCSN per line)
 		CONTEXTCSN=$( ${SLAPD_PATH}/bin/ldapsearch -x -H "${PHOST}" -D "${PBINDDN}" -w "${PBINDPW}" -b "${PBASEDN}" -o nettimeout=5 -s base contextCSN -LLL 2>/dev/null )
