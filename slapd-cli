@@ -204,14 +204,14 @@ syncrepl_get_value() {
 	parameter=$2
 
 	# Check if parameter value is surrounded with quotes
-	echo "$1" | grep -e $2'="' > /dev/null
+	echo "$syncrepl" | grep -e $parameter'="' > /dev/null
 	noquotes=$?
 
 	if [ $noquotes -gt 0 ]
 	then
-		RETVAL=$( echo "$1" | sed -e 's/.*'$2'[ \t]*=[ \t]*\([^ \t]\+\).*$/\1/' | sed -e 's/["]//g' | sed -e "s/[']//g")
+		RETVAL=$( echo "$syncrepl" | sed -e 's/.*'$parameter'[ \t]*=[ \t]*\([^ \t]\+\).*$/\1/' | sed -e 's/["]//g' | sed -e "s/[']//g")
 	else
-		RETVAL=$( echo "$1" | sed -e 's/.*'$2'[ \t]*=[ \t]*"\([^"\t]\+\)".*$/\1/' | sed -e 's/["]//g' | sed -e "s/[']//g");
+		RETVAL=$( echo "$syncrepl" | sed -e 's/.*'$parameter'[ \t]*=[ \t]*"\([^"\t]\+\)".*$/\1/' | sed -e 's/["]//g' | sed -e "s/[']//g");
 	fi
 }
 
