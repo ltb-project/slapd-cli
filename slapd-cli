@@ -227,6 +227,17 @@ else
 	message "info" "[INFO] Using built-in configuration - this may cause some problems"
 fi
 
+# Use systemd to manage the service if it's present
+_use_systemctl=0
+if [ $PPID -ne 1 -a -z "$SYSTEMCTL_SKIP_REDIRECT" ] && \
+    [ -d /run/systemd/system ] && \
+    [ -z "$INVOCATION_ID" ]  ;
+
+then
+	SYSTEMD_SERVICE_NAME=slapd
+	_use_systemctl=1
+fi
+
 #====================================================================
 # Initiate 'su' command
 #====================================================================
@@ -370,7 +381,11 @@ start_slapd() {
 	if [ -n "$1" ]; then
 		$SLAPD_BIN -h "$SLAPD_SERVICES" $SLAPD_PARAMS -d $1
 	else
-		$SLAPD_BIN -h "$SLAPD_SERVICES" $SLAPD_PARAMS
+		if [ $_use_systemctl -eq 1 ] ; then
+			systemctl start "$SYSTEMD_SERVICE_NAME"
+		else
+			$SLAPD_BIN -h "$SLAPD_SERVICES" $SLAPD_PARAMS
+		fi
 		sleep 1
 
 		# Presence of PID file
@@ -447,24 +462,29 @@ stop_slapd() {
 		message "info" "[INFO] Can't read PID file, to stop OpenLDAP try: $0 forcestop"
 		return 1
 	else
-		PID=`cat $SLAPD_PID_FILE`
-		kill -INT $PID
+		if [ $_use_systemctl -eq 1 ] ; then
+			systemctl stop "$SYSTEMD_SERVICE_NAME"
+			message "info" "[OK] OpenLDAP stopped"
+		else
+			PID=`cat $SLAPD_PID_FILE`
+			kill -INT $PID
+			# Waiting loop
+			i=0
+			while [ -e /proc/$PID ]
+			do
+				if [ $i -eq $TIMEOUT ]
+				then
+					# Timeout
+					message "alert" "[ALERT] OpenLDAP still running (PID $PID), try: $0 forcestop"
+					exit 1
+				fi
+				i=`expr $i + 1`
+				sleep 1
+			done
 
-		# Waiting loop
-		i=0
-		while [ -e /proc/$PID ]
-		do
-			if [ $i -eq $TIMEOUT ]
-			then
-				# Timeout
-				message "alert" "[ALERT] OpenLDAP still running (PID $PID), try: $0 forcestop"
-				exit 1
-			fi
-			i=`expr $i + 1`
-			sleep 1
-		done
+			message "info" "[OK] OpenLDAP stopped after $i seconds"
+		fi
 
-		message "info" "[OK] OpenLDAP stopped after $i seconds"
 	fi
 
 	# Backup if necessary
@@ -588,6 +608,16 @@ forcestop() {
 }
 
 slapd_status() {
+	if [ $_use_systemctl -eq 1 ]
+	then
+		if systemctl --quiet is-active "$SYSTEMD_SERVICE_NAME"
+		then
+			return 0
+		else
+			return 1
+		fi
+	fi
+
 	# Return 0 if slapd is running, 1 if slapd is stopped, 2 if we can't say
 	if [ ! -r $SLAPD_PID_FILE ]
 	then
