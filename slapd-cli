@@ -229,10 +229,17 @@ fi
 
 # Use systemd to manage the service if it's present
 _use_systemctl=0
-if [ $PPID -ne 1 -a -z "$SYSTEMCTL_SKIP_REDIRECT" ] && \
-    [ -d /run/systemd/system ] && \
-    [ -z "$INVOCATION_ID" ]  ;
 
+# When systemd runs a shell script, bash sets PPID to 1 (init)
+if [ $PPID -ne 1 ] && \
+    # This variable lets the user disable systemd redirection
+    [ -z "$SYSTEMCTL_SKIP_REDIRECT" ] && \
+    # This tests whether systemd is currently managing the systemd
+    [ -d /run/systemd/system ] && \
+    # This variable is set when systemd >=232 runs a service
+    # We need this test in case systemd does not run the slapd-cli script
+    # directly (PPID>1) but runs it through /etc/init.d/slapd
+    [ -z "$INVOCATION_ID" ]  ;
 then
 	SYSTEMD_SERVICE_NAME=slapd
 	_use_systemctl=1
