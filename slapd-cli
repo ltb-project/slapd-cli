@@ -936,7 +936,7 @@ backup() {
 				$SLAPCAT_BIN -b "$sufprint" $SLAPCAT_PARAMS -l "$file"
 				ret=$?
 			else
-				$SU "$SLAPCAT_BIN -b \"$sufprint\" $SLAPCAT_PARAMS" > "$file"
+				$SU "$SLAPCAT_BIN -b \"$sufprint\" $SLAPCAT_PARAMS > \"$file\""
 				ret=$?
 				chown $SLAPD_USER:$SLAPD_GROUP $file
 			fi
@@ -994,7 +994,7 @@ backupconfig() {
 			$SLAPCAT_BIN $SLAPCAT_PARAMS -n0 -F $SLAPD_CONF_DIR -l "$file"
 			ret=$?
 		else
-			$SU "$SLAPCAT_BIN $SLAPCAT_PARAMS -n0 -F $SLAPD_CONF_DIR" > "$file"
+			$SU "$SLAPCAT_BIN $SLAPCAT_PARAMS -n0 -F $SLAPD_CONF_DIR > \"$file\""
 			ret=$?
 			chown $SLAPD_USER:$SLAPD_GROUP $file
 		fi
