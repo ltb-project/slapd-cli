@@ -53,28 +53,28 @@ CLI_BIN="/usr/local/openldap/sbin/slapd-cli"
 #====================================================================
 case $1 in
 	start)
-	${CLI_BIN} start
+	exec ${CLI_BIN} start
 	;;
 	stop)
-	${CLI_BIN} stop
+	exec ${CLI_BIN} stop
 	;;
 	forcestop)
-	${CLI_BIN} forcestop
+	exec ${CLI_BIN} forcestop
 	;;
 	restart)
-	${CLI_BIN} restart
+	exec ${CLI_BIN} restart
 	;;
 	debug)
-	${CLI_BIN} debug
+	exec ${CLI_BIN} debug
 	;;
 	force-reload)
-	${CLI_BIN} force-reload
+	exec ${CLI_BIN} force-reload
 	;;
 	status)
-	${CLI_BIN} status
+	exec ${CLI_BIN} status
 	;;
 	configtest)
-	${CLI_BIN} configtest
+	exec ${CLI_BIN} configtest
 	;;
 	*)
 	echo "Usage: $0 {start|stop|forcestop|restart|debug|force-reload|status|configtest}"
