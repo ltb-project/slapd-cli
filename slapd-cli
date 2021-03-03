@@ -933,10 +933,10 @@ backup() {
 			# slapcat
 			if [ -z "$SU" ]
 			then
-				$SLAPCAT_BIN -b "$sufprint" $SLAPCAT_PARAMS -l "$file"
+				$UMASK $MASK && $SLAPCAT_BIN -b "$sufprint" $SLAPCAT_PARAMS -l "$file"
 				ret=$?
 			else
-				$SU "$SLAPCAT_BIN -b \"$sufprint\" $SLAPCAT_PARAMS > \"$file\""
+				$SU "$UMASK $MASK && $SLAPCAT_BIN -b \"$sufprint\" $SLAPCAT_PARAMS > \"$file\""
 				ret=$?
 				chown $SLAPD_USER:$SLAPD_GROUP $file
 			fi
@@ -955,9 +955,9 @@ backup() {
 			else
 				if [ -z "$SU" ]
 				then
-					$BACKUP_COMPRESS_BIN "$file"
+					$UMASK $MASK && $BACKUP_COMPRESS_BIN "$file"
 				else
-					$SU "$BACKUP_COMPRESS_BIN $file"
+					$SU "$UMASK $MASK && $BACKUP_COMPRESS_BIN $file"
 				fi
 
 				# alert
@@ -991,10 +991,10 @@ backupconfig() {
 		# slapcat
 		if [ -z "$SU" ]
 		then
-			$SLAPCAT_BIN $SLAPCAT_PARAMS -n0 -F $SLAPD_CONF_DIR -l "$file"
+			$UMASK $MASK && $SLAPCAT_BIN $SLAPCAT_PARAMS -n0 -F $SLAPD_CONF_DIR -l "$file"
 			ret=$?
 		else
-			$SU "$SLAPCAT_BIN $SLAPCAT_PARAMS -n0 -F $SLAPD_CONF_DIR > \"$file\""
+			$SU "$UMASK $MASK && $SLAPCAT_BIN $SLAPCAT_PARAMS -n0 -F $SLAPD_CONF_DIR > \"$file\""
 			ret=$?
 			chown $SLAPD_USER:$SLAPD_GROUP $file
 		fi
