@@ -14,7 +14,7 @@
 # Copyright (C) 2005 Sebastien BAHLOUL 
 # Copyright (C) 2005 Raphael OUAZANA 
 # Copyright (C) 2005 Clement OUDOT
-# Copyright (C) 2010 LTB-project.org
+# Copyright (C) 2010-2021 LTB-project.org
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License
@@ -33,7 +33,7 @@
 #====================================================================
 # Version
 #====================================================================
-VERSION="2.5"
+VERSION="2.6"
 
 #====================================================================
 # Default parameters (unless /usr/local/openldap/etc/openldap/{script_name}.conf)
