@@ -1,0 +1,97 @@
+dn: DATA_SUFFIX
+o: DATA_ORGANIZATION
+dc: DATA_RDNSUFFIX
+description: DATA_ORGANIZATION
+objectClass: dcObject
+objectClass: organization
+objectClass: top
+
+dn: ou=people,DATA_SUFFIX
+objectClass: organizationalUnit
+objectClass: top
+ou: people
+
+dn: ou=groups,DATA_SUFFIX
+objectClass: organizationalUnit
+objectClass: top
+ou: groups
+
+dn: ou=ppolicies,DATA_SUFFIX
+objectClass: organizationalUnit
+objectClass: top
+ou: groups
+ou: ppolicies
+
+dn: cn=default,ou=ppolicies,DATA_SUFFIX
+objectClass: pwdPolicy
+objectClass: pwdPolicyChecker
+objectClass: organizationalRole
+cn: default
+pwdMaxAge: 7776000
+pwdAttribute: userPassword
+pwdCheckQuality: 2
+pwdLockout: TRUE
+pwdMaxFailure: 5
+pwdMinLength: 12
+pwdMustChange: TRUE
+pwdCheckModule: /usr/local/openldap/lib64/ppm.so
+
+dn: cn=nopolicy,ou=ppolicies,DATA_SUFFIX
+objectClass: pwdPolicy
+objectClass: pwdPolicyChecker
+objectClass: organizationalRole
+cn: nopolicy
+pwdAttribute: userPassword
+
+dn: ou=infrastructure,DATA_SUFFIX
+objectClass: organizationalUnit
+objectClass: top
+ou: infrastructure
+
+dn: ou=accounts,ou=infrastructure,DATA_SUFFIX
+objectClass: organizationalUnit
+objectClass: top
+ou: accounts
+
+dn: DATA_SERVICEACCOUNT_DN
+objectClass: organizationalRole
+objectClass: simpleSecurityObject
+objectClass: top
+cn: DATA_SERVICEACCOUNT_RDN
+userPassword: DATA_SERVICEACCOUNT_PW
+pwdPolicySubentry: cn=nopolicy,ou=ppolicies,DATA_SUFFIX
+memberOf: cn=admin,ou=groups,DATA_SUFFIX
+
+dn: DATA_FIRSTADMIN_DN
+objectClass: inetOrgPerson
+objectClass: organizationalPerson
+objectClass: person
+objectClass: top
+cn: DATA_FIRSTADMIN_GN DATA_FIRSTADMIN_SN
+givenName: DATA_FIRSTADMIN_GN
+mail: DATA_FIRSTADMIN_MAIL
+sn: DATA_FIRSTADMIN_SN
+uid: DATA_FIRSTADMIN_UID
+userPassword: DATA_FIRSTADMIN_PW
+memberOf: cn=admin,ou=groups,DATA_SUFFIX
+
+dn: DATA_SECONDADMIN_DN
+objectClass: inetOrgPerson
+objectClass: organizationalPerson
+objectClass: person
+objectClass: top
+cn: DATA_SECONDADMIN_GN DATA_SECONDADMIN_SN
+givenName: DATA_SECONDADMIN_GN
+mail: DATA_SECONDADMIN_MAIL
+sn: DATA_SECONDADMIN_SN
+uid: DATA_SECONDADMIN_UID
+userPassword: DATA_SECONDADMIN_PW
+memberOf: cn=admin,ou=groups,DATA_SUFFIX
+
+dn: cn=admin,ou=groups,DATA_SUFFIX
+objectClass: groupOfNames
+objectClass: top
+cn: admin
+member: DATA_FIRSTADMIN_DN
+member: DATA_SECONDADMIN_DN
+member: DATA_SERVICEACCOUNT_DN

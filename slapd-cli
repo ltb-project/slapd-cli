@@ -33,7 +33,7 @@
 #====================================================================
 # Version
 #====================================================================
-VERSION="2.7"
+VERSION="2.8"
 
 #====================================================================
 # Default parameters (unless /usr/local/openldap/etc/openldap/{script_name}.conf)
@@ -1314,6 +1314,258 @@ check_sync() {
 	exit $RES
 }
 
+
+# escape special chars in value
+escape_value()
+{
+	VALUE="$1"
+
+	# escape ampersand (&)
+	if printf "%s" $VALUE | grep -q -F '&'; then
+		VALUE=$( printf "%s" "$VALUE" | sed -e 's/\&/\\\&/g' )
+	fi
+
+	# escape slash (/)
+	if printf "%s" $VALUE | grep -q -F '/'; then
+		VALUE=$( printf "%s" "$VALUE" | sed -e 's/\//\\\//g' )
+	fi
+
+	# escape line-feed (\n)
+	if printf "%s" $VALUE | grep -q -F '\n'; then
+		VALUE=$( printf "%s" "$VALUE" | sed -e 's/\\n/\\\\n/g' )
+	fi
+
+	printf "%s" "$VALUE"
+}
+
+
+# replace a pattern by a value in the given data file
+replace_pattern()
+{
+	PATTERN="$1"
+	VALUE="$2"
+	FILE="$3"
+
+	VALUE=$( escape_value "$VALUE" )
+
+	if [ ! -z ${PATTERN+x} ] && [ ! -z ${VALUE+x} ] && [ ! -z ${FILE+x} ]; then
+		if [ "${PATTERN}" != "" ] && [ "${VALUE}" != "" ] && [ "${FILE}" != "" ]; then
+			sed -i -e "s/${PATTERN}/${VALUE}/g" ${FILE}
+		fi
+	fi
+
+}
+
+
+import_test_config() {
+	message "info" "[INFO] Checking synchronization..."
+}
+
+
+import_test_data() {
+	message "info" "[INFO] Import test data..."
+
+	if [ ! -z ${DATA_TEMPLATE_FILE+x} ] ; then
+
+		# Prepare template for replacement
+		DATA_TEMPLATE_PATH="${CLI_CONF_FILE%/*}/${DATA_TEMPLATE_FILE}"
+		if [ -f ${DATA_TEMPLATE_PATH} ]
+		then
+		. ${CLI_CONF_FILE}
+			message "info" "[INFO] Using ${DATA_TEMPLATE_PATH} as template"
+		else
+			message "error" "[ERROR] No data template found at ${DATA_TEMPLATE_PATH}"
+			exit 1
+		fi
+
+		DATA_FILE_PATH="${DATA_TEMPLATE_PATH%.ldif}-filled.ldif"
+		cp -f ${DATA_TEMPLATE_PATH} ${DATA_FILE_PATH}
+		chown $SLAPD_USER:$SLAPD_GROUP ${DATA_FILE_PATH}
+		chmod 640 ${DATA_FILE_PATH}
+
+		# create new organizations and add people and groups branches inside
+		if [ ! -z ${DATA_ORGANIZATIONS+x} ] ; then
+	        	ORGS=${DATA_ORGANIZATIONS}, # adds final separator
+			while [ ${ORGS} ]; do
+				o="${ORGS%%,*}" # get current organization
+				message "info" "[INFO] Adding organization ${o}"
+				echo "
+
+dn: ou=${o},${DATA_SUFFIX}
+objectClass: organizationalUnit
+objectClass: top
+ou: ${o}
+
+dn: ou=people,ou=${o},${DATA_SUFFIX}
+objectClass: organizationalUnit
+objectClass: top
+ou: people
+
+dn: ou=groups,ou=${o},${DATA_SUFFIX}
+objectClass: organizationalUnit
+objectClass: top
+ou: groups
+
+dn: cn=admin,ou=groups,ou=${o},${DATA_SUFFIX}
+objectClass: groupOfNames
+objectClass: top
+cn: admin
+member: DATA_FIRSTADMIN_DN" >> ${DATA_FILE_PATH}
+
+				# Add corresponding memberOf
+				sed -i -e "/^dn: DATA_FIRSTADMIN_DN/amemberOf: cn=admin,ou=groups,ou=${o},${DATA_SUFFIX}" ${DATA_FILE_PATH}
+
+				# remove current organization from list
+				ORGS=${ORGS#*,};
+			done;
+		fi
+
+		# Add new users
+		DATA_USERS=$( set | grep -E '^DATA_USER_' | sed -e 's/^DATA_USER_\([^_]\+\)_.*/\1/' | sort -u )
+		for DATA_USER in ${DATA_USERS}; do
+			eval DATA_USER_DN="\$DATA_USER_${DATA_USER}_DN"
+			eval DATA_USER_PW="\$DATA_USER_${DATA_USER}_PW"
+			eval DATA_USER_UID="\$DATA_USER_${DATA_USER}_UID"
+			eval DATA_USER_SN="\$DATA_USER_${DATA_USER}_SN"
+			eval DATA_USER_GN="\$DATA_USER_${DATA_USER}_GN"
+			eval DATA_USER_MAIL="\$DATA_USER_${DATA_USER}_MAIL"
+
+			if [ ! ${DATA_USER_PW} = "" ] ; then
+				DATA_USER_PW_HASH="$( $SLAPD_PATH/sbin/slappasswd -o module-path=${SLAPD_MODULEDIR} -o module-load=pw-sha2 -h {SSHA256} -s ${DATA_USER_PW} )"
+			fi
+
+			if [ ! ${DATA_USER_DN} = "" ] && [ ! ${DATA_USER_PW_HASH} = "" ] && [ ! ${DATA_USER_UID} = "" ] && [ ! ${DATA_USER_SN} = "" ] && [ ! ${DATA_USER_GN} = "" ] && [ ! ${DATA_USER_MAIL} = "" ] ; then
+				message "info" "[INFO] Adding user ${DATA_USER}: uid=${DATA_USER_UID}, gn=${DATA_USER_GN}, sn=${DATA_USER_SN}, mail=${DATA_USER_MAIL}, pass=${DATA_USER_PW_HASH}"
+				echo "
+
+dn: ${DATA_USER_DN}
+objectClass: inetOrgPerson
+objectClass: organizationalPerson
+objectClass: person
+objectClass: top
+cn: ${DATA_USER_GN} ${DATA_USER_SN}
+givenName: ${DATA_USER_GN}
+mail: ${DATA_USER_MAIL}
+sn: ${DATA_USER_SN}
+uid: ${DATA_USER_UID}
+userPassword: ${DATA_USER_PW_HASH}" >> ${DATA_FILE_PATH}
+
+
+			fi
+
+		done
+
+		# Adapt LDAP suffix
+		message "info" "[INFO] Using suffix ${DATA_SUFFIX}"
+		replace_pattern "DATA_SUFFIX" "${DATA_SUFFIX}" "${DATA_FILE_PATH}"
+		if [ ! -z ${DATA_SUFFIX+x} ] ; then
+			DATA_RDNSUFFIX=${DATA_SUFFIX#*=} # remove dc= (front of DN)
+			DATA_RDNSUFFIX=${DATA_RDNSUFFIX%%,*} # remove suffix (back of DN)
+			replace_pattern "DATA_RDNSUFFIX" "${DATA_RDNSUFFIX}" "${DATA_FILE_PATH}"
+		fi
+		replace_pattern "DATA_ORGANIZATION" "${DATA_ORGANIZATION}" "${DATA_FILE_PATH}"
+
+		# Adapt serviceaccount DN, RDN and password
+		if [ ! -z ${DATA_SERVICEACCOUNT_DN+x} ] ; then
+			DATA_SERVICEACCOUNT_RDN=${DATA_SERVICEACCOUNT_DN#*=} # remove cn= (front of DN)
+			DATA_SERVICEACCOUNT_RDN=${DATA_SERVICEACCOUNT_RDN%%,*} # remove suffix (back of DN)
+			message "info" "[INFO] Adding service account ${DATA_SERVICEACCOUNT_RDN}"
+			replace_pattern "DATA_SERVICEACCOUNT_RDN" "${DATA_SERVICEACCOUNT_RDN}" "${DATA_FILE_PATH}"
+			replace_pattern "DATA_SERVICEACCOUNT_DN" "${DATA_SERVICEACCOUNT_DN}" "${DATA_FILE_PATH}"
+			replace_pattern "DATA_SERVICEACCOUNT_PW" "$( $SLAPD_PATH/sbin/slappasswd -o module-path=${SLAPD_MODULEDIR} -o module-load=pw-sha2 -h {SSHA256} -s ${DATA_SERVICEACCOUNT_PW} )" "${DATA_FILE_PATH}"
+		fi
+
+
+		# Adapt first admin infos
+		message "info" "[INFO] Adapt first admin infos"
+		replace_pattern "DATA_FIRSTADMIN_DN" "${DATA_FIRSTADMIN_DN}" "${DATA_FILE_PATH}"
+		replace_pattern "DATA_FIRSTADMIN_PW" "$( $SLAPD_PATH/sbin/slappasswd -o module-path=${SLAPD_MODULEDIR} -o module-load=pw-sha2 -h {SSHA256} -s ${DATA_FIRSTADMIN_PW} )" "${DATA_FILE_PATH}"
+		replace_pattern "DATA_FIRSTADMIN_UID" "${DATA_FIRSTADMIN_UID}" "${DATA_FILE_PATH}"
+		replace_pattern "DATA_FIRSTADMIN_GN" "${DATA_FIRSTADMIN_GN}" "${DATA_FILE_PATH}"
+		replace_pattern "DATA_FIRSTADMIN_SN" "${DATA_FIRSTADMIN_SN}" "${DATA_FILE_PATH}"
+		replace_pattern "DATA_FIRSTADMIN_MAIL" "${DATA_FIRSTADMIN_MAIL}" "${DATA_FILE_PATH}"
+
+		# Adapt second admin infos
+		message "info" "[INFO] Adapt second admin infos"
+		replace_pattern "DATA_SECONDADMIN_DN" "${DATA_SECONDADMIN_DN}" "${DATA_FILE_PATH}"
+		replace_pattern "DATA_SECONDADMIN_PW" "$( $SLAPD_PATH/sbin/slappasswd -o module-path=${SLAPD_MODULEDIR} -o module-load=pw-sha2 -h {SSHA256} -s ${DATA_SECONDADMIN_PW} )" "${DATA_FILE_PATH}"
+		replace_pattern "DATA_SECONDADMIN_UID" "${DATA_SECONDADMIN_UID}" "${DATA_FILE_PATH}"
+		replace_pattern "DATA_SECONDADMIN_GN" "${DATA_SECONDADMIN_GN}" "${DATA_FILE_PATH}"
+		replace_pattern "DATA_SECONDADMIN_SN" "${DATA_SECONDADMIN_SN}" "${DATA_FILE_PATH}"
+		replace_pattern "DATA_SECONDADMIN_MAIL" "${DATA_SECONDADMIN_MAIL}" "${DATA_FILE_PATH}"
+
+
+		# Prepare add command
+		if [ "$SLAPD_CONF_DIR" ]
+		then
+			SLAPADD_PARAMS="$SLAPADD_PARAMS -F $SLAPD_CONF_DIR -l ${DATA_FILE_PATH}"
+		elif [ "$SLAPD_CONF" ]
+		then
+			SLAPADD_PARAMS="$SLAPADD_PARAMS -f $SLAPD_CONF -l ${DATA_FILE_PATH}"
+		fi
+
+		# Get data directories
+		dbdirs="$DATA_PATH"
+		get_confvalues "suffix"
+		dbsufs=$RETVAL
+
+		if [ "$DATA_PATH" = "auto" ]
+		then
+			get_confvalues "directory"
+			dbdirs=$RETVAL
+
+			if [ -z "$dbdirs" -o -z "$dbsufs" ]
+			then
+				message "alert" "[ALERT] No database directories found"
+				exit 1
+			fi
+		fi
+
+		i=1
+		dbdir=""
+		for suf in $dbsufs ; do
+			sufprint=$( echo $suf | sed "s/#20/ /" )
+			if [ "$sufprint" = "${DATA_SUFFIX}" ] ; then
+				dbdir=$( echo $dbdirs | awk -v j="$i" 'BEGIN{OFS=" "} {print $j}' )
+				sufp=$( echo $suf | sed "s/#20/ /" )
+			fi
+			i=$( expr $i + 1 )
+		done
+		if [ -z $dbdir ]; then
+			message "error" "[ERROR] No suffix configured for ${DATA_SUFFIX}"
+			exit 1
+		fi
+
+
+		# Delete current data
+		message "info" "[INFO] Delete data in $dbdir associated to suffix ${DATA_SUFFIX}"
+		if [ -z "$SU" ]
+		then
+			rm -rf "$dbdir/"*
+		else
+			$SU "rm -rf $dbdir/"*
+		fi
+
+		# Import backup
+		if [ -z "$SU" ]
+		then
+			$SLAPADD_BIN -b "$sufp" $SLAPADD_PARAMS
+		else
+			$SU "$SLAPADD_BIN -b \"$sufp\" $SLAPADD_PARAMS"
+		fi
+		
+		# alert
+		if [ $? -ne 0 ]
+		then
+			message "alert" "[ALERT] OpenLDAP database restore failed for $sufp"
+			exit 1
+		fi
+		message "info" "[OK] Data restored for $sufp"
+
+	fi
+
+}
+
 #====================================================================
 # Action switch
 #====================================================================
@@ -1388,8 +1640,17 @@ case $1 in
 	checksync)
 	check_sync
 	;;
+	importtestconfig)
+	import_test_config
+	;;
+	importtestdata)
+	backup
+	stop_slapd
+	import_test_data
+	start_slapd
+	;;
 	*)
-	echo "Usage: $0 {start|stop|forcestop|restart|debug|force-reload|status|configtest|db_recover|reindex|removelogs|backup|restore|backupconfig|restoreconfig|checksync}"
+	echo "Usage: $0 {start|stop|forcestop|restart|debug|force-reload|status|configtest|db_recover|reindex|removelogs|backup|restore|backupconfig|restoreconfig|checksync|importtestconfig|importtestdata}"
 	exit 1
 	;;
 esac
