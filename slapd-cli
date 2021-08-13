@@ -67,12 +67,6 @@ SLAPCAT_PARAMS="-o ldif-wrap=no"
 SLAPINDEX_BIN="$SLAPD_PATH/sbin/slapindex"
 SLAPTEST_BIN="$SLAPD_PATH/sbin/slaptest"
 
-# BerkeleyDB directory and files
-BDB_PATH="/usr/local/berkeleydb"
-DB_ARCHIVE_BIN="$BDB_PATH/bin/db_archive"
-DB_RECOVER_BIN="$BDB_PATH/bin/db_recover"
-RECOVER_AT_STARTUP="1" # 0 for OpenLDAP 2.3.x
-
 # Backup
 BACKUP_AT_SHUTDOWN="1"
 BACKUP_PATH="/tmp/openldap"
@@ -318,14 +312,6 @@ start_slapd() {
 		message "info" "[OK] OpenLDAP is already running"
 		exit 0
 	fi   
-
-	# Check if db_recover is required
-	if [ $RECOVER_AT_STARTUP -eq 1 ]
-	then
-		db_recover
-	else
-		message "info" "[INFO] No db_recover done"	
-	fi
 
 	# Start message
 	message "info" "[INFO] Launching OpenLDAP..."
@@ -628,61 +614,6 @@ configtest() {
 	fi
 }
 
-db_recover() {
-	# Start message
-	message "info" "[INFO] Launching OpenLDAP database recovery..."
-
-	if [ ! -x $DB_RECOVER_BIN ]
-	then
-		message "alert" "[ALERT] Cannot execute $DB_RECOVER_BIN, aborting database recovery"
-		exit 1
-	fi
-
-	# slapd must be stopped
-	slapd_status
-
-	if [ $? -ne 1 ]
-	then
-		message "alert" "[ALERT] OpenLDAP is running or was not correctly shut down, aborting database recovery"
-		exit 1
-	fi
-
-	dbdirs="$DATA_PATH"
-
-	if [ "$DATA_PATH" = "auto" ]
-	then
-		get_confvalues "directory"
-		dbdirs=$RETVAL
-
-		if [ -z "$dbdirs" ]
-		then
-			message "alert" "[ALERT] No database directories found"
-			exit 1
-		fi
-	fi
-
-	for dbdir in $dbdirs
-	do
-
-		# db_recover
-		if [ -z "$SU" ]
-		then
-			$DB_RECOVER_BIN -h "$dbdir"
-		else
-			$SU "$DB_RECOVER_BIN -h \"$dbdir\""
-		fi
-
-		if [ $? -eq 0 ]
-		then
-			message "info" "[OK] OpenLDAP $dbdir database recovery successful"
-		else
-			message "alert" "[ALERT] OpenLDAP $dbdir database recovery failed"
-			exit 1
-		fi
-
-	done
-}
-
 reindex() {
 	# Start message
 	message "info" "[INFO] Launching OpenLDAP database reindexing..."
@@ -719,62 +650,6 @@ reindex() {
 			exit 1
 		fi
 	fi
-}
-
-removelogs() {
-	# Start message
-	message "info" "[INFO] Launching OpenLDAP database logs archiving..."
-
-	if [ ! -x $DB_ARCHIVE_BIN ]
-	then
-		message "alert" "[ALERT] Can't execute $DB_ARCHIVE_BIN, aborting database archiving"
-		exit 1
-	fi
-
-
-	# slapd must be stopped
-	slapd_status
-
-	if [ $? -ne 1 ]
-	then
-		message "alert" "[ALERT] OpenLDAP is running or was not correctly shut down, aborting archiving"
-		exit 1
-	fi
-
-	dbdirs="$DATA_PATH"
-
-	if [ "$DATA_PATH" = "auto" ]
-	then
-		get_confvalues "directory"
-		dbdirs=$RETVAL
-
-		if [ -z "$dbdirs" ]
-		then
-			message "alert" "[ALERT] No database directories found"
-			exit 1
-		fi
-	fi
-
-	for dbdir in $dbdirs
-	do
-
-		# db_archive
-		if [ -z "$SU" ]
-		then
-			$DB_ARCHIVE_BIN -h "$dbdir" -d
-		else
-			$SU "$DB_ARCHIVE_BIN -h \"$dbdir\" -d"
-		fi
-
-		if [ $? -eq 0 ]
-		then
-			message "info" "[OK] OpenLDAP $dbdir database logs archiving successful"
-		else
-			message "alert" "[ALERT] OpenLDAP $dbdir database logs archiving failed"
-			exit 1
-		fi
-
-	done
 }
 
 backup() {
@@ -1587,14 +1462,8 @@ case $1 in
 	configtest)
 	configtest
 	;;
-	db_recover)
-	db_recover
-	;;
 	reindex)
 	reindex
-	;;
-	removelogs)
-	removelogs
 	;;
 	backup)
 	backup
@@ -1629,7 +1498,7 @@ case $1 in
 	start_slapd
 	;;
 	*)
-	echo "Usage: $0 {start|stop|forcestop|restart|debug|force-reload|status|configtest|db_recover|reindex|removelogs|backup|restore|backupconfig|restoreconfig|checksync|importtestconfig|importtestdata}"
+	echo "Usage: $0 {start|stop|forcestop|restart|debug|force-reload|status|configtest|reindex|backup|restore|backupconfig|restoreconfig|checksync|importtestconfig|importtestdata}"
 	exit 1
 	;;
 esac
