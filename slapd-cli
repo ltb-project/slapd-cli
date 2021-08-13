@@ -1356,51 +1356,116 @@ replace_pattern()
 
 }
 
+# compute hash for given password
+compute_hash()
+{
+	PASS="$1"
+
+	$SLAPD_PATH/sbin/slappasswd -o module-path="${SLAPD_MODULEDIR}" -o module-load="pw-argon2" -h "{ARGON2}" -s "${PASS}"
+}
+
 
 import_test_config() {
 	message "info" "[INFO] Import test configuration..."
+
+	if [ -z ${SLAPD_CONF_DIR+x} ] || [ "${SLAPD_CONF_DIR}" = "" ]; then
+		message "alert" "[ALERT] No SLAPD_CONF_DIR defined. You should set this variable to the directory hosting the configuration"
+		exit 1;
+	fi
+
+	if [ -z ${CONFIG_TEMPLATE_FILE+x} ] || [ "${CONFIG_TEMPLATE_FILE}" = "" ]; then
+		message "alert" "[ALERT] No CONFIG_TEMPLATE_FILE defined."
+	fi
+
+	# Prepare template for replacement
+	CONFIG_TEMPLATE_PATH="${CLI_CONF_FILE%/*}/${CONFIG_TEMPLATE_FILE}"
+	if [ -f ${CONFIG_TEMPLATE_PATH} ]
+	then
+		message "info" "[INFO] Using ${CONFIG_TEMPLATE_PATH} as template"
+	else
+		message "error" "[ERROR] No data template found at ${CONFIG_TEMPLATE_PATH}"
+		exit 1
+	fi
+
+	CONFIG_FILE_PATH="${CONFIG_TEMPLATE_PATH%.ldif}-filled.ldif"
+	cp -f ${CONFIG_TEMPLATE_PATH} ${CONFIG_FILE_PATH}
+	chown $SLAPD_USER:$SLAPD_GROUP ${CONFIG_FILE_PATH}
+	chmod 640 ${CONFIG_FILE_PATH}
+
+	replace_pattern "CONFIG_FQDN" "${CONFIG_FQDN}" "${CONFIG_FILE_PATH}"
+	replace_pattern "CONFIG_LOGLEVEL" "${CONFIG_LOGLEVEL}" "${CONFIG_FILE_PATH}"
+	replace_pattern "CONFIG_MANAGERROOTDN" "${CONFIG_MANAGERROOTDN}" "${CONFIG_FILE_PATH}"
+	replace_pattern "CONFIG_MANAGERROOTPW" "$( compute_hash ${CONFIG_MANAGERROOTPW} )" "${CONFIG_FILE_PATH}"
+	replace_pattern "CONFIG_CONFIGROOTDN" "${CONFIG_CONFIGROOTDN}" "${CONFIG_FILE_PATH}"
+	replace_pattern "CONFIG_CONFIGROOTPW" "$( compute_hash ${CONFIG_CONFIGROOTPW} )" "${CONFIG_FILE_PATH}"
+	replace_pattern "CONFIG_SUFFIX" "${CONFIG_SUFFIX}" "${CONFIG_FILE_PATH}"
+	replace_pattern "CONFIG_DATADIR" "${CONFIG_DATADIR}" "${CONFIG_FILE_PATH}"
+
+
+	# Delete current data
+	message "info" "[INFO] Delete configuration data in ${SLAPD_CONF_DIR}"
+	if [ -z "$SU" ]
+	then
+		rm -rf "${SLAPD_CONF_DIR}/"*
+	else
+		$SU "rm -rf ${SLAPD_CONF_DIR}/"*
+	fi
+
+	# Import backup
+	message "info" "[INFO] Importing configuration data from ${CONFIG_FILE_PATH}"
+	SLAPADD_PARAMS="$SLAPADD_PARAMS -n0 -F $SLAPD_CONF_DIR -l ${CONFIG_FILE_PATH}"
+	if [ -z "$SU" ]
+	then
+		$SLAPADD_BIN $SLAPADD_PARAMS
+	else
+		$SU "$SLAPADD_BIN $SLAPADD_PARAMS"
+	fi
+
 }
 
 
 import_test_data() {
 	message "info" "[INFO] Import test data..."
 
-	if [ ! -z ${DATA_TEMPLATE_FILE+x} ] ; then
+	if [ -z ${DATA_TEMPLATE_FILE+x} ] || [ "${DATA_TEMPLATE_FILE}" = "" ]; then
+		message "alert" "[ALERT] No DATA_TEMPLATE_FILE variable defined"
+	fi
 
-		# Prepare template for replacement
-		DATA_TEMPLATE_PATH="${CLI_CONF_FILE%/*}/${DATA_TEMPLATE_FILE}"
-		if [ -f ${DATA_TEMPLATE_PATH} ]
-		then
-		. ${CLI_CONF_FILE}
-			message "info" "[INFO] Using ${DATA_TEMPLATE_PATH} as template"
-		else
-			message "error" "[ERROR] No data template found at ${DATA_TEMPLATE_PATH}"
-			exit 1
+
+
+	# Prepare template for replacement
+	DATA_TEMPLATE_PATH="${CLI_CONF_FILE%/*}/${DATA_TEMPLATE_FILE}"
+	if [ -f ${DATA_TEMPLATE_PATH} ]
+	then
+		message "info" "[INFO] Using ${DATA_TEMPLATE_PATH} as template"
+	else
+		message "error" "[ERROR] No data template found at ${DATA_TEMPLATE_PATH}"
+		exit 1
+	fi
+
+	DATA_FILE_PATH="${DATA_TEMPLATE_PATH%.ldif}-filled.ldif"
+	cp -f ${DATA_TEMPLATE_PATH} ${DATA_FILE_PATH}
+	chown $SLAPD_USER:$SLAPD_GROUP ${DATA_FILE_PATH}
+	chmod 640 ${DATA_FILE_PATH}
+
+
+	# Add new admins
+	DATA_ADMINS=$( set | grep -E '^DATA_ADMIN_' | sed -e 's/^DATA_ADMIN_\([^_]\+\)_.*/\1/' | sort -u )
+	for DATA_ADMIN in ${DATA_ADMINS}; do
+		eval DATA_ADMIN_DN="\$DATA_ADMIN_${DATA_ADMIN}_DN"
+		eval DATA_ADMIN_PW="\$DATA_ADMIN_${DATA_ADMIN}_PW"
+		eval DATA_ADMIN_UID="\$DATA_ADMIN_${DATA_ADMIN}_UID"
+		eval DATA_ADMIN_SN="\$DATA_ADMIN_${DATA_ADMIN}_SN"
+		eval DATA_ADMIN_GN="\$DATA_ADMIN_${DATA_ADMIN}_GN"
+		eval DATA_ADMIN_MAIL="\$DATA_ADMIN_${DATA_ADMIN}_MAIL"
+
+		if [ "${DATA_ADMIN_PW}" != "" ] ; then
+			DATA_ADMIN_PW_HASH="$( compute_hash ${DATA_ADMIN_PW} )"
 		fi
 
-		DATA_FILE_PATH="${DATA_TEMPLATE_PATH%.ldif}-filled.ldif"
-		cp -f ${DATA_TEMPLATE_PATH} ${DATA_FILE_PATH}
-		chown $SLAPD_USER:$SLAPD_GROUP ${DATA_FILE_PATH}
-		chmod 640 ${DATA_FILE_PATH}
-
-
-		# Add new admins
-		DATA_ADMINS=$( set | grep -E '^DATA_ADMIN_' | sed -e 's/^DATA_ADMIN_\([^_]\+\)_.*/\1/' | sort -u )
-		for DATA_ADMIN in ${DATA_ADMINS}; do
-			eval DATA_ADMIN_DN="\$DATA_ADMIN_${DATA_ADMIN}_DN"
-			eval DATA_ADMIN_PW="\$DATA_ADMIN_${DATA_ADMIN}_PW"
-			eval DATA_ADMIN_UID="\$DATA_ADMIN_${DATA_ADMIN}_UID"
-			eval DATA_ADMIN_SN="\$DATA_ADMIN_${DATA_ADMIN}_SN"
-			eval DATA_ADMIN_GN="\$DATA_ADMIN_${DATA_ADMIN}_GN"
-			eval DATA_ADMIN_MAIL="\$DATA_ADMIN_${DATA_ADMIN}_MAIL"
-
-			if [ "${DATA_ADMIN_PW}" != "" ] ; then
-				DATA_ADMIN_PW_HASH="$( $SLAPD_PATH/sbin/slappasswd -o module-path=${SLAPD_MODULEDIR} -o module-load=pw-argon2 -h {ARGON2} -s ${DATA_ADMIN_PW} )"
-			fi
-
-			if [ "${DATA_ADMIN_DN}" != "" ] && [ "${DATA_ADMIN_PW_HASH}" != "" ] && [ "${DATA_ADMIN_UID}" != "" ] && [ "${DATA_ADMIN_SN}" != "" ] && [ "${DATA_ADMIN_GN}" != "" ] && [ "${DATA_ADMIN_MAIL}" != "" ] ; then
-				message "info" "[INFO] Adding admin ${DATA_ADMIN}: uid=${DATA_ADMIN_UID}, gn=${DATA_ADMIN_GN}, sn=${DATA_ADMIN_SN}, mail=${DATA_ADMIN_MAIL}, pass=${DATA_ADMIN_PW_HASH}"
-				printf "\n%s" "
+		if [ "${DATA_ADMIN_DN}" != "" ] && [ "${DATA_ADMIN_PW_HASH}" != "" ] && [ "${DATA_ADMIN_UID}" != "" ] && [ "${DATA_ADMIN_SN}" != "" ] && [ "${DATA_ADMIN_GN}" != "" ] && [ "${DATA_ADMIN_MAIL}" != "" ] ; then
+			message "info" "[INFO] Adding admin ${DATA_ADMIN}: uid=${DATA_ADMIN_UID}, gn=${DATA_ADMIN_GN}, sn=${DATA_ADMIN_SN}, mail=${DATA_ADMIN_MAIL}, pass=${DATA_ADMIN_PW_HASH}"
+			printf "\n%s" "
 dn: ${DATA_ADMIN_DN}
 objectClass: inetOrgPerson
 objectClass: organizationalPerson
@@ -1415,20 +1480,20 @@ userPassword: ${DATA_ADMIN_PW_HASH}
 pwdPolicySubentry: cn=admin-policy,ou=ppolicies,DATA_SUFFIX
 memberOf: cn=admin,ou=groups,DATA_SUFFIX" >> ${DATA_FILE_PATH}
 
-				MEMBER="member: ${DATA_ADMIN_DN}
+			MEMBER="member: ${DATA_ADMIN_DN}
 ${MEMBER}"
-			fi
+		fi
 
-		done
+	done
 
 
-		# create new organizations and add people and groups branches inside
-		if [ ! -z ${DATA_ORGANIZATIONS+x} ] ; then
-	        	ORGS=${DATA_ORGANIZATIONS}, # adds final separator
-			while [ ${ORGS} ]; do
-				o="${ORGS%%,*}" # get current organization
-				message "info" "[INFO] Adding organization ${o}"
-				printf "\n%s" "
+	# create new organizations and add people and groups branches inside
+	if [ ! -z ${DATA_ORGANIZATIONS+x} ] ; then
+		ORGS=${DATA_ORGANIZATIONS}, # adds final separator
+		while [ ${ORGS} ]; do
+			o="${ORGS%%,*}" # get current organization
+			message "info" "[INFO] Adding organization ${o}"
+			printf "\n%s" "
 dn: ou=${o},${DATA_SUFFIX}
 objectClass: organizationalUnit
 objectClass: top
@@ -1450,22 +1515,22 @@ objectClass: top
 cn: admin
 $MEMBER" >> ${DATA_FILE_PATH}
 
-				# Add corresponding memberOf
-				for DATA_ADMIN in ${DATA_ADMINS}; do
-					eval DATA_ADMIN_DN="\$DATA_ADMIN_${DATA_ADMIN}_DN"
-					sed -i -e "/^dn: ${DATA_ADMIN_DN}/amemberOf: cn=admin,ou=groups,ou=${o},${DATA_SUFFIX}" ${DATA_FILE_PATH}
-				done
+			# Add corresponding memberOf
+			for DATA_ADMIN in ${DATA_ADMINS}; do
+				eval DATA_ADMIN_DN="\$DATA_ADMIN_${DATA_ADMIN}_DN"
+				sed -i -e "/^dn: ${DATA_ADMIN_DN}/amemberOf: cn=admin,ou=groups,ou=${o},${DATA_SUFFIX}" ${DATA_FILE_PATH}
+			done
 
-				# remove current organization from list
-				ORGS=${ORGS#*,};
-			done;
-		fi
+			# remove current organization from list
+			ORGS=${ORGS#*,};
+		done;
+	fi
 
 
-		# Add admin group
-		MEMBER="member: DATA_SERVICEACCOUNT_DN
+	# Add admin group
+	MEMBER="member: DATA_SERVICEACCOUNT_DN
 ${MEMBER}"
-		printf "\n%s" "
+	printf "\n%s" "
 dn: cn=admin,ou=groups,DATA_SUFFIX
 objectClass: groupOfNames
 objectClass: top
@@ -1473,23 +1538,23 @@ cn: admin
 $MEMBER" >> ${DATA_FILE_PATH}
 
 
-		# Add new users
-		DATA_USERS=$( set | grep -E '^DATA_USER_' | sed -e 's/^DATA_USER_\([^_]\+\)_.*/\1/' | sort -u )
-		for DATA_USER in ${DATA_USERS}; do
-			eval DATA_USER_DN="\$DATA_USER_${DATA_USER}_DN"
-			eval DATA_USER_PW="\$DATA_USER_${DATA_USER}_PW"
-			eval DATA_USER_UID="\$DATA_USER_${DATA_USER}_UID"
-			eval DATA_USER_SN="\$DATA_USER_${DATA_USER}_SN"
-			eval DATA_USER_GN="\$DATA_USER_${DATA_USER}_GN"
-			eval DATA_USER_MAIL="\$DATA_USER_${DATA_USER}_MAIL"
+	# Add new users
+	DATA_USERS=$( set | grep -E '^DATA_USER_' | sed -e 's/^DATA_USER_\([^_]\+\)_.*/\1/' | sort -u )
+	for DATA_USER in ${DATA_USERS}; do
+		eval DATA_USER_DN="\$DATA_USER_${DATA_USER}_DN"
+		eval DATA_USER_PW="\$DATA_USER_${DATA_USER}_PW"
+		eval DATA_USER_UID="\$DATA_USER_${DATA_USER}_UID"
+		eval DATA_USER_SN="\$DATA_USER_${DATA_USER}_SN"
+		eval DATA_USER_GN="\$DATA_USER_${DATA_USER}_GN"
+		eval DATA_USER_MAIL="\$DATA_USER_${DATA_USER}_MAIL"
 
-			if [ "${DATA_USER_PW}" != "" ] ; then
-				DATA_USER_PW_HASH="$( $SLAPD_PATH/sbin/slappasswd -o module-path=${SLAPD_MODULEDIR} -o module-load=pw-argon2 -h {ARGON2} -s ${DATA_USER_PW} )"
-			fi
+		if [ "${DATA_USER_PW}" != "" ] ; then
+			DATA_USER_PW_HASH="$( compute_hash ${DATA_USER_PW} )"
+		fi
 
-			if [ "${DATA_USER_DN}" != "" ] && [ "${DATA_USER_PW_HASH}" != "" ] && [ "${DATA_USER_UID}" != "" ] && [ "${DATA_USER_SN}" != "" ] && [ "${DATA_USER_GN}" != "" ] && [ "${DATA_USER_MAIL}" != "" ] ; then
-				message "info" "[INFO] Adding user ${DATA_USER}: uid=${DATA_USER_UID}, gn=${DATA_USER_GN}, sn=${DATA_USER_SN}, mail=${DATA_USER_MAIL}, pass=${DATA_USER_PW_HASH}"
-				printf "\n%s" "
+		if [ "${DATA_USER_DN}" != "" ] && [ "${DATA_USER_PW_HASH}" != "" ] && [ "${DATA_USER_UID}" != "" ] && [ "${DATA_USER_SN}" != "" ] && [ "${DATA_USER_GN}" != "" ] && [ "${DATA_USER_MAIL}" != "" ] ; then
+			message "info" "[INFO] Adding user ${DATA_USER}: uid=${DATA_USER_UID}, gn=${DATA_USER_GN}, sn=${DATA_USER_SN}, mail=${DATA_USER_MAIL}, pass=${DATA_USER_PW_HASH}"
+			printf "\n%s" "
 dn: ${DATA_USER_DN}
 objectClass: inetOrgPerson
 objectClass: organizationalPerson
@@ -1503,100 +1568,98 @@ uid: ${DATA_USER_UID}
 userPassword: ${DATA_USER_PW_HASH}" >> ${DATA_FILE_PATH}
 
 
-			fi
-
-		done
-
-		# Adapt LDAP suffix
-		message "info" "[INFO] Using suffix ${DATA_SUFFIX}"
-		replace_pattern "DATA_SUFFIX" "${DATA_SUFFIX}" "${DATA_FILE_PATH}"
-		if [ ! -z ${DATA_SUFFIX+x} ] ; then
-			DATA_RDNSUFFIX=${DATA_SUFFIX#*=} # remove dc= (front of DN)
-			DATA_RDNSUFFIX=${DATA_RDNSUFFIX%%,*} # remove suffix (back of DN)
-			replace_pattern "DATA_RDNSUFFIX" "${DATA_RDNSUFFIX}" "${DATA_FILE_PATH}"
-		fi
-		replace_pattern "DATA_ORGANIZATION" "${DATA_ORGANIZATION}" "${DATA_FILE_PATH}"
-
-		# Adapt serviceaccount DN, RDN and password
-		if [ ! -z ${DATA_SERVICEACCOUNT_DN+x} ] ; then
-			DATA_SERVICEACCOUNT_RDN=${DATA_SERVICEACCOUNT_DN#*=} # remove cn= (front of DN)
-			DATA_SERVICEACCOUNT_RDN=${DATA_SERVICEACCOUNT_RDN%%,*} # remove suffix (back of DN)
-			message "info" "[INFO] Adding service account ${DATA_SERVICEACCOUNT_RDN}"
-			replace_pattern "DATA_SERVICEACCOUNT_RDN" "${DATA_SERVICEACCOUNT_RDN}" "${DATA_FILE_PATH}"
-			replace_pattern "DATA_SERVICEACCOUNT_DN" "${DATA_SERVICEACCOUNT_DN}" "${DATA_FILE_PATH}"
-			replace_pattern "DATA_SERVICEACCOUNT_PW" "$( $SLAPD_PATH/sbin/slappasswd -o module-path=${SLAPD_MODULEDIR} -o module-load=pw-argon2 -h {ARGON2} -s ${DATA_SERVICEACCOUNT_PW} )" "${DATA_FILE_PATH}"
 		fi
 
+	done
 
-		# Prepare add command
-		if [ "$SLAPD_CONF_DIR" ]
-		then
-			SLAPADD_PARAMS="$SLAPADD_PARAMS -F $SLAPD_CONF_DIR -l ${DATA_FILE_PATH}"
-		elif [ "$SLAPD_CONF" ]
-		then
-			SLAPADD_PARAMS="$SLAPADD_PARAMS -f $SLAPD_CONF -l ${DATA_FILE_PATH}"
-		fi
-
-		# Get data directories
-		dbdirs="$DATA_PATH"
-		get_confvalues "suffix"
-		dbsufs=$RETVAL
-
-		if [ "$DATA_PATH" = "auto" ]
-		then
-			get_confvalues "directory"
-			dbdirs=$RETVAL
-
-			if [ -z "$dbdirs" -o -z "$dbsufs" ]
-			then
-				message "alert" "[ALERT] No database directories found"
-				exit 1
-			fi
-		fi
-
-		i=1
-		dbdir=""
-		for suf in $dbsufs ; do
-			sufprint=$( echo $suf | sed "s/#20/ /" )
-			if [ "$sufprint" = "${DATA_SUFFIX}" ] ; then
-				dbdir=$( echo $dbdirs | awk -v j="$i" 'BEGIN{OFS=" "} {print $j}' )
-				sufp=$( echo $suf | sed "s/#20/ /" )
-			fi
-			i=$( expr $i + 1 )
-		done
-		if [ -z $dbdir ]; then
-			message "error" "[ERROR] No suffix configured for ${DATA_SUFFIX}"
-			exit 1
-		fi
-
-
-		# Delete current data
-		message "info" "[INFO] Delete data in $dbdir associated to suffix ${DATA_SUFFIX}"
-		if [ -z "$SU" ]
-		then
-			rm -rf "$dbdir/"*
-		else
-			$SU "rm -rf $dbdir/"*
-		fi
-
-		# Import backup
-		message "info" "[INFO] Importing data from ${DATA_FILE_PATH}"
-		if [ -z "$SU" ]
-		then
-			$SLAPADD_BIN -b "$sufp" $SLAPADD_PARAMS
-		else
-			$SU "$SLAPADD_BIN -b \"$sufp\" $SLAPADD_PARAMS"
-		fi
-		
-		# alert
-		if [ $? -ne 0 ]
-		then
-			message "alert" "[ALERT] OpenLDAP database restore failed for $sufp"
-			exit 1
-		fi
-		message "info" "[OK] Data restored for $sufp"
-
+	# Adapt LDAP suffix
+	message "info" "[INFO] Using suffix ${DATA_SUFFIX}"
+	replace_pattern "DATA_SUFFIX" "${DATA_SUFFIX}" "${DATA_FILE_PATH}"
+	if [ ! -z ${DATA_SUFFIX+x} ] ; then
+		DATA_RDNSUFFIX=${DATA_SUFFIX#*=} # remove dc= (front of DN)
+		DATA_RDNSUFFIX=${DATA_RDNSUFFIX%%,*} # remove suffix (back of DN)
+		replace_pattern "DATA_RDNSUFFIX" "${DATA_RDNSUFFIX}" "${DATA_FILE_PATH}"
 	fi
+	replace_pattern "DATA_ORGANIZATION" "${DATA_ORGANIZATION}" "${DATA_FILE_PATH}"
+
+	# Adapt serviceaccount DN, RDN and password
+	if [ ! -z ${DATA_SERVICEACCOUNT_DN+x} ] ; then
+		DATA_SERVICEACCOUNT_RDN=${DATA_SERVICEACCOUNT_DN#*=} # remove cn= (front of DN)
+		DATA_SERVICEACCOUNT_RDN=${DATA_SERVICEACCOUNT_RDN%%,*} # remove suffix (back of DN)
+		message "info" "[INFO] Adding service account ${DATA_SERVICEACCOUNT_RDN}"
+		replace_pattern "DATA_SERVICEACCOUNT_RDN" "${DATA_SERVICEACCOUNT_RDN}" "${DATA_FILE_PATH}"
+		replace_pattern "DATA_SERVICEACCOUNT_DN" "${DATA_SERVICEACCOUNT_DN}" "${DATA_FILE_PATH}"
+		replace_pattern "DATA_SERVICEACCOUNT_PW" "$( compute_hash ${DATA_SERVICEACCOUNT_PW} )" "${DATA_FILE_PATH}"
+	fi
+
+
+	# Prepare add command
+	if [ "$SLAPD_CONF_DIR" ]
+	then
+		SLAPADD_PARAMS="$SLAPADD_PARAMS -F $SLAPD_CONF_DIR -l ${DATA_FILE_PATH}"
+	elif [ "$SLAPD_CONF" ]
+	then
+		SLAPADD_PARAMS="$SLAPADD_PARAMS -f $SLAPD_CONF -l ${DATA_FILE_PATH}"
+	fi
+
+	# Get data directories
+	dbdirs="$DATA_PATH"
+	get_confvalues "suffix"
+	dbsufs=$RETVAL
+
+	if [ "$DATA_PATH" = "auto" ]
+	then
+		get_confvalues "directory"
+		dbdirs=$RETVAL
+
+		if [ -z "$dbdirs" -o -z "$dbsufs" ]
+		then
+			message "alert" "[ALERT] No database directories found"
+			exit 1
+		fi
+	fi
+
+	i=1
+	dbdir=""
+	for suf in $dbsufs ; do
+		sufprint=$( echo $suf | sed "s/#20/ /" )
+		if [ "$sufprint" = "${DATA_SUFFIX}" ] ; then
+			dbdir=$( echo $dbdirs | awk -v j="$i" 'BEGIN{OFS=" "} {print $j}' )
+			sufp=$( echo $suf | sed "s/#20/ /" )
+		fi
+		i=$( expr $i + 1 )
+	done
+	if [ -z $dbdir ]; then
+		message "error" "[ERROR] No suffix configured for ${DATA_SUFFIX}"
+		exit 1
+	fi
+
+
+	# Delete current data
+	message "info" "[INFO] Delete data in $dbdir associated to suffix ${DATA_SUFFIX}"
+	if [ -z "$SU" ]
+	then
+		rm -rf "$dbdir/"*
+	else
+		$SU "rm -rf $dbdir/"*
+	fi
+
+	# Import backup
+	message "info" "[INFO] Importing data from ${DATA_FILE_PATH}"
+	if [ -z "$SU" ]
+	then
+		$SLAPADD_BIN -b "$sufp" $SLAPADD_PARAMS
+	else
+		$SU "$SLAPADD_BIN -b \"$sufp\" $SLAPADD_PARAMS"
+	fi
+
+	# alert
+	if [ $? -ne 0 ]
+	then
+		message "alert" "[ALERT] OpenLDAP database restore failed for $sufp"
+		exit 1
+	fi
+	message "info" "[OK] Data restored for $sufp"
 
 }
 
