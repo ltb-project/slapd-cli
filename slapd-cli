@@ -660,7 +660,7 @@ slapd_version() {
 	BASE="cn=monitor"
 	ATTR="monitoredInfo"
 	SCOPE="base"
-	VERSION=$( $SLAPD_PATH/bin/ldapsearch -x -H "${HOST}" -b "${BASE}" -s "${SCOPE}" -LLL "${ATTR}" 2>/dev/null| grep "${ATTR}" )
+	VERSION=$( ${LDAPSEARCH_BIN} -x -H "${HOST}" -b "${BASE}" -s "${SCOPE}" -LLL "${ATTR}" 2>/dev/null| grep "${ATTR}" )
 
 	if [ "${VERSION}" = "" ] ; then
 		if [ ! -z ${SLAPD_BIN+x} ] && [ "${SLAPD_BIN}" != "" ] ; then
@@ -1278,7 +1278,7 @@ check_sync() {
 		PBASEDN=$RETVAL
 		echo "Checking host ${PHOST}"
 		# Get remote provider contextCSN (one contextCSN per line)
-		CONTEXTCSN=$( ${SLAPD_PATH}/bin/ldapsearch -x -H "${PHOST}" -D "${PBINDDN}" -w "${PBINDPW}" -b "${PBASEDN}" -o nettimeout=5 -s base contextCSN -LLL 2>/dev/null )
+		CONTEXTCSN=$( ${LDAPSEARCH_BIN} -x -H "${PHOST}" -D "${PBINDDN}" -w "${PBINDPW}" -b "${PBASEDN}" -o nettimeout=5 -s base contextCSN -LLL 2>/dev/null )
 
 		# Checking status of previous command
 		if [ $? -ne 0 ]; then
