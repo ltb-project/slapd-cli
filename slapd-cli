@@ -652,6 +652,25 @@ slapd_status() {
 	fi
 }
 
+# Try to get slapd version by searching in cn=monitor as anonymous
+# else, get it by launching slapd process with -V
+slapd_version() {
+	# Assume service is opened at least on localhost
+	HOST="ldap://localhost:${PORT:-389}/"
+	BASE="cn=monitor"
+	ATTR="monitoredInfo"
+	SCOPE="base"
+	VERSION=$( $SLAPD_PATH/bin/ldapsearch -x -H "${HOST}" -b "${BASE}" -s "${SCOPE}" -LLL "${ATTR}" 2>/dev/null| grep "${ATTR}" )
+
+	if [ "${VERSION}" = "" ] ; then
+		if [ ! -z ${SLAPD_BIN+x} ] && [ "${SLAPD_BIN}" != "" ] ; then
+			VERSION="$( ${SLAPD_BIN} -V 2>&1 | grep slapd )"
+		fi
+	fi
+	VERSION=$( printf "%s" "${VERSION}" | sed -e 's/^.*\(slapd .*(.*)\).*$/\1/' )
+	printf "%s" "${VERSION}"
+}
+
 display_status() {
 
 	# Print script version
@@ -667,6 +686,10 @@ display_status() {
 		PID=`cat $SLAPD_PID_FILE`
 
 		message "info" "[INFO] Process OpenLDAP is running (PID $PID)"
+		VER="$( slapd_version )"
+		if [ "${VER}" != "" ] ; then
+			message "info" "[INFO] Detected OpenLDAP version: $( slapd_version )"
+		fi
 		message "info" "[INFO] Listening to services $SLAPD_SERVICES"
 
 		CPU=`ps -p $PID -o %cpu=`
