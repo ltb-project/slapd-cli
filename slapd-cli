@@ -67,11 +67,6 @@ SLAPCAT_PARAMS="-o ldif-wrap=no"
 SLAPINDEX_BIN="$SLAPD_PATH/sbin/slapindex"
 SLAPTEST_BIN="$SLAPD_PATH/sbin/slaptest"
 
-SLURPD_ACTIVATE="0"
-SLURPD_PID_FILE="$SLAPD_PATH/var/run/slurpd.pid"
-SLURPD_PARAMS=""
-SLURPD_BIN="$SLAPD_PATH/libexec/slurpd"
-
 # BerkeleyDB directory and files
 BDB_PATH="/usr/local/berkeleydb"
 DB_ARCHIVE_BIN="$BDB_PATH/bin/db_archive"
@@ -284,18 +279,6 @@ then
 	exit 1
 fi
 
-# Activate slurpd? (get from configuration file)
-if [ -n "$SLAPD_CONF" -a ! -d "$SLAPD_CONF_DIR" ]; then
-	SLURPD_ACTIVATE=`grep "^replica" $SLAPD_CONF | wc -l`
-fi
-
-# Right to execute slurpd, if used
-if [ $SLURPD_ACTIVATE -ne 0 -a ! -x "$SLURPD_BIN" ]
-then
-	message "alert" "[ALERT] Can't execute $SLURPD_BIN"
-	exit 1
-fi
-
 # Is there a configuration directory ?
 if [ "$SLAPD_CONF_DIR" -a ! -w "$SLAPD_CONF_DIR" ]
 then
@@ -416,51 +399,6 @@ start_slapd() {
 	fi
 }
 
-start_slurpd() {
-	if [ $SLURPD_ACTIVATE -eq 0 ]
-	then
-		return 1
-	fi
-
-	# Start message
-	message "info" "[INFO] Launching OpenLDAP replication..."
-
-	# Parameters
-	if [ "$SLAPD_CONF_DIR" ]
-	then
-		SLAPD_PARAMS="$SLAPD_PARAMS -F $SLAPD_CONF_DIR"
-	elif [ "$SLAPD_CONF" ]
-	then
-		SLAPD_PARAMS="$SLAPD_PARAMS -f $SLAPD_CONF"
-	fi
-
-	# It's time to start slurpd
-	if [ -z "$SU" ]
-	then
-		$SLURPD_BIN $SLURPD_PARAMS
-	else
-		$SU "$SLURPD_BIN $SLURPD_PARAMS"
-	fi
-	sleep 1
-
-	# Presence of PID file
-	if [ ! -r $SLURPD_PID_FILE ]
-	then
-		message "alert" "[ALERT] No PID file for slurpd"
-		exit 1
-	fi
-
-	# Is slurpd launched?
-	PID=`cat $SLURPD_PID_FILE`
-	if [ ! -e /proc/$PID ]
-	then
-		message "alert" "[ALERT] slurpd not running"
-		exit 1
-	else
-		message "info" "[OK] OpenLDAP replication started"
-	fi
-}
-
 stop_slapd() {
 	# Stop message
 	message "info" "[INFO] Halting OpenLDAP..."
@@ -505,42 +443,6 @@ stop_slapd() {
 	fi
 }
 
-stop_slurpd() {
-	# Desactivate slurpd?
-	if [ $SLURPD_ACTIVATE -eq 0 ]
-	then
-		return 1
-	fi
-
-	# Stop message
-	message "info" "[INFO] Halting OpenLDAP replication..."
-
-	# Presence of PID file
-	if [ ! -r $SLURPD_PID_FILE ]
-	then
-		message "warning" "[WARNING] Can't read PID file, to stop slurpd try: $0 forcestop"
-	else
-		PID=`cat $SLURPD_PID_FILE`
-		kill -INT $PID
-
-		# Waiting loop
-		i=0
-		while [ -e /proc/$PID ]
-		do
-			if [ $i -eq $TIMEOUT ]
-			then
-				# Timeout, need to kill
-				message "alert" "[ALERT] slurpd still running (PID $PID), try: $0 forcestop"
-				return 1
-			fi
-			i=`expr $i + 1`
-			sleep 1
-		done
-
-		message "info" "[OK] OpenLDAP replication stopped after $i seconds"
-	fi
-}
-
 forcestop() {
 	# Stop message
 	message "info" "[INFO] Killing OpenLDAP with force..."
@@ -576,41 +478,6 @@ forcestop() {
 			message "info" "[OK] OpenLDAP process killed with force (PID $PID)"
 		else
 			message "alert" "[ALERT] Unable to kill OpenLDAP with force (PID $PID)"
-			exit 1
-		fi
-	fi
-
-	# Stop message
-	message "info" "[INFO] Killing OpenLDAP replication with force..."
-
-	# Presence of PID file
-	if [ ! -r $SLURPD_PID_FILE ]
-	then
-		# Check if any slapd process are running
-		if [ `$PS_COMMAND | grep $SLURPD_BIN | grep -v grep | wc -l` -eq 0 ]
-		then
-			message "info" "[INFO] Found no slurpd process running"
-		else
-			# Try a killall
-			/usr/bin/killall -KILL $SLURPD_BIN
-
-			if [ $? -eq 0 ]
-			then
-				message "info" "[OK] slurpd process killed with force"
-			else
-				message "alert" "[ALERT] Unable to kill slurpd with force"
-				exit 1
-			fi
-		fi
-	else
-		PID=`cat $SLURPD_PID_FILE`
-		kill -KILL $PID
-
-		if [ $? -eq 0 ]
-		then
-			message "info" "[OK] slurpd process killed with force (PID $PID)"
-		else
-			message "alert" "[ALERT] Unable to kill slurpd with force (PID $PID)"
 			exit 1
 		fi
 	fi
@@ -1692,12 +1559,10 @@ userPassword: ${DATA_USER_PW_HASH}" >> ${DATA_FILE_PATH}
 case $1 in
 	start)
 	configtest
-	start_slurpd
 	start_slapd
 	;;
 	stop)
 	stop_slapd
-	stop_slurpd
 	;;
 	forcestop)
 	forcestop
@@ -1705,20 +1570,15 @@ case $1 in
 	restart)
 	configtest
 	stop_slapd
-	stop_slurpd
-	start_slurpd
 	start_slapd
 	;;
 	debug)
 	stop_slapd
-	stop_slurpd
-	start_slurpd
 	start_slapd $DEBUG_LEVEL
 	;;
 	force-reload)
 	configtest
 	forcestop
-	start_slurpd
 	start_slapd
 	;;
 	status)
@@ -1741,9 +1601,7 @@ case $1 in
 	;;
 	restore)
 	stop_slapd
-	stop_slurpd
 	restore
-	start_slurpd
 	start_slapd
 	;;
 	backupconfig)
@@ -1751,10 +1609,8 @@ case $1 in
 	;;
 	restoreconfig)
 	stop_slapd
-	stop_slurpd
 	restoreconfig
 	configtest
-	start_slurpd
 	start_slapd
 	;;
 	checksync)
