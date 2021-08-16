@@ -36,6 +36,13 @@
 VERSION="2.8"
 
 #====================================================================
+# CLI configuration file, for overloading every variable below
+#====================================================================
+PROG_NAME=`basename $0 | sed 's/^[KS][0-9][0-9]//'` # For nice messages
+CLI_CONF_FILE=/usr/local/openldap/etc/openldap/${PROG_NAME}.conf
+
+
+#====================================================================
 # Default parameters (unless /usr/local/openldap/etc/openldap/{script_name}.conf)
 #====================================================================
 # IP and port to listen (use wildcard * in IP to listen on all interfaces)
@@ -82,8 +89,6 @@ DEBUG_LEVEL="256" # Debug loglevel
 UMASK="umask"
 MASK="0027"
 
-# Script specific
-PROG_NAME=`basename $0 | sed 's/^[KS][0-9][0-9]//'` # For nice messages
 OS=`uname -s`   # To adapt message printing
 MYUID=`id -u`     # For UNIX compatibility => modify this command
 MYGID=`id -g`     # For UNIX compatibility => modify this command
@@ -174,9 +179,9 @@ backconfig_get_values() {
 	fi
 	if [ -z "$SU" ]
 	then
-		list=`$slapcat_cmd | perl -p0e 's/\n //g' | grep "^$1:" | sed "s/$1: //" | sed "s/ /#20/g"`
+		list=$( $slapcat_cmd | grep "^$1:" | sed "s/$1: //" | sed "s/ /#20/g" )
 	else
-		list=`$SU "$slapcat_cmd" | perl -p0e 's/\n //g' | grep "^$1:" | sed "s/$1: //" | sed "s/ /#20/g"`
+		list=$( $SU "$slapcat_cmd" | grep "^$1:" | sed "s/$1: //" | sed "s/ /#20/g" )
 	fi
 
 	if [ -n "$list" ]; then
@@ -209,7 +214,6 @@ syncrepl_get_value() {
 #====================================================================
 # Load specific parameters
 #====================================================================
-CLI_CONF_FILE=/usr/local/openldap/etc/openldap/${PROG_NAME}.conf
 if [ -f ${CLI_CONF_FILE} ]
 then
 	. ${CLI_CONF_FILE}

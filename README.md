@@ -4,8 +4,7 @@
 
 The slapd-cli project provides start, stop and other commands for OpenLDAP daemon. It requires:
 * Logger, to forward messages to syslog
-* Awk, for regular expression management
-* BerkeleyDB, for recover and archive tools
+* Awk, sed for regular expression management
 * OpenLDAP, for save, index,... tools
 
 Configuration of this script can be done in an external file with the same name as the slapd-cli program
