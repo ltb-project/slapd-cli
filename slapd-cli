@@ -527,7 +527,7 @@ slapd_version() {
 display_status() {
 
 	# Print script version
-	message "info" "[INFO] LDAP Tool Box OpenLDAP init script version $VERSION" 
+	message "info" "[INFO] LDAP Tool Box slapd-cli script version $VERSION" 
 
 	# Get status
 	slapd_status

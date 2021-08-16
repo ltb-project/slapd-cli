@@ -1,21 +1,29 @@
-# OpenLDAP init script
+# slapd-cli
 
 ## Presentation
 
-The init script slapd provide start, stop and other commands for OpenLDAP daemon. It requires:
+The slapd-cli project provides start, stop and other commands for OpenLDAP daemon. It requires:
 * Logger, to forward messages to syslog
 * Awk, for regular expression management
 * BerkeleyDB, for recover and archive tools
-* OpenLDAP, for save, index, … tools
+* OpenLDAP, for save, index,... tools
 
-Configuration of this script can be done in an external file, with the same name as the init script in /etc/default.
+Configuration of this script can be done in an external file with the same name as the slapd-cli program
 
-A backup feature allows to save all data or configuration in an LDIF file, compressed or not. The restore feature import the last backup in the directory.
+The main features are:
+* start / stop / status of OpenLDAP daemon
+* check configuration
+* debug: start OpenLDAP in debug mode (stay attached)
+* reindex
+* backup / restore data
+* backup / restore configuration
+* check synchronization status
+* import test data / test configuration
 
 ## Documentation
 
-See http://ltb-project.org/wiki/documentation/openldap-initscript
+See http://ltb-project.org/wiki/documentation/slapd-cli
 
 ## Download
 
-See http://ltb-project.org/wiki/download#init_script
+See http://ltb-project.org/wiki/download#slapd-cli
