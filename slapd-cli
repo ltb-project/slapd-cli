@@ -725,7 +725,6 @@ backup() {
 			else
 				$SU "$UMASK $MASK && $SLAPCAT_BIN -b \"$sufprint\" $SLAPCAT_PARAMS > \"$file\""
 				ret=$?
-				chown $SLAPD_USER:$SLAPD_GROUP $file
 			fi
 
 			# alert
@@ -783,7 +782,6 @@ backupconfig() {
 		else
 			$SU "$UMASK $MASK && $SLAPCAT_BIN $SLAPCAT_PARAMS -n0 -F $SLAPD_CONF_DIR > \"$file\""
 			ret=$?
-			chown $SLAPD_USER:$SLAPD_GROUP $file
 		fi
 
 	elif [ "$SLAPD_CONF" ]
