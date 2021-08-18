@@ -1156,6 +1156,12 @@ import_test_config() {
 		exit 1;
 	fi
 
+
+	if [ ! -z "$( ls -A ${SLAPD_CONF_DIR} )" ] ; then
+		message "info" "[INFO] Configuration data found, launch configuration backup"
+		backupconfig
+	fi
+
 	if [ -z ${CONFIG_TEMPLATE_FILE+x} ] || [ "${CONFIG_TEMPLATE_FILE}" = "" ]; then
 		message "alert" "[ALERT] No CONFIG_TEMPLATE_FILE defined."
 	fi
@@ -1504,7 +1510,6 @@ case $1 in
 	check_sync
 	;;
 	importtestconfig)
-	backupconfig
 	stop_slapd
 	import_test_config
 	start_slapd
