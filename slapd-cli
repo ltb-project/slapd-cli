@@ -1144,7 +1144,7 @@ compute_hash()
 {
 	PASS="$1"
 
-	$SLAPD_PATH/sbin/slappasswd -o module-path="${SLAPD_MODULEDIR}" -o module-load="pw-argon2" -h "{ARGON2}" -s "${PASS}"
+	$SLAPD_PATH/sbin/slappasswd -o module-path="${SLAPD_MODULEDIR}" -o module-load="argon2" -h "{ARGON2}" -s "${PASS}"
 }
 
 
