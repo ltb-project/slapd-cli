@@ -1512,7 +1512,6 @@ case $1 in
 	importtestconfig)
 	stop_slapd
 	import_test_config
-	start_slapd
 	;;
 	importtestdata)
 	backup
