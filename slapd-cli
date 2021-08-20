@@ -1320,7 +1320,7 @@ convert_config() {
 	mkdir -p ${TMP_CONF_DIR}
 
 	# import configuration into the temporary configuration directory
-	SLAPTEST_PARAMS=" -F ${TMP_CONF_DIR} -f ${1} -u"
+	SLAPTEST_PARAMS=" -n0 -F ${TMP_CONF_DIR} -f ${1}"
 	$SLAPTEST_BIN $SLAPTEST_PARAMS > /dev/null 2>&1
 
 	if [ $? -ne 0 ] ; then
