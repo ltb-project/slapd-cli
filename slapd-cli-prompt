@@ -9,7 +9,14 @@ _slapd-cli()
 
     if [[ ${COMP_WORDS[*]} == *"convertconfig"* ]] || [[ ${COMP_WORDS[*]} == *"buildconfigtemplate"* ]] ; then
         # if the action requires a filename, autocomplete with a filename
-        COMPREPLY=( $(compgen -f -- ${CUR}) )
+
+        if [[ $( type -t _longopt ) == function ]] ; then
+            # better filename competion with function _longopt
+            _longopt
+        else
+            COMPREPLY=( $(compgen -f -- ${CUR}) )
+        fi
+
         return 0
     else
         for A in ${ACTIONS} ; do
