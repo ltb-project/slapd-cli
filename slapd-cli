@@ -237,8 +237,8 @@ if [ $PPID -ne 1 ] && \
     # directly (PPID>1) but runs it through /etc/init.d/slapd
     [ -z "$INVOCATION_ID" ]  ;
 then
-	SYSTEMD_SERVICE_NAME=slapd
-	SYSTEMD_LLOAD_SERVICE_NAME=lload
+	SYSTEMD_SERVICE_NAME=slapd-ltb
+	SYSTEMD_LLOAD_SERVICE_NAME=lload-ltb
 	_use_systemctl=1
 fi
 
