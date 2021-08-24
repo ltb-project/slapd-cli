@@ -64,6 +64,7 @@ SLAPD_BIN="$SLAPD_PATH/libexec/slapd"
 SLAPD_USER=""
 SLAPD_GROUP=""
 SLAPD_SYSLOG_LOCAL_USER="local4"
+SLAPD_MODULEDIR="$SLAPD_PATH/libexec/openldap"
 
 DATA_PATH="$SLAPD_PATH/var/openldap-data"
 
