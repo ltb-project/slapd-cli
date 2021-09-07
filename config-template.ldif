@@ -2,7 +2,7 @@ dn: cn=config
 objectClass: olcGlobal
 cn: config
 olcConfigFile: /usr/local/openldap/etc/openldap/slapd.conf
-olcConfigDir: /usr/local/openldap/etc/openldap/slapd.d
+olcConfigDir: /tmp/slapd.d-tmp
 olcArgsFile: /usr/local/openldap/var/run/slapd.args
 olcAttributeOptions: lang-
 olcAuthzPolicy: none
@@ -232,12 +232,9 @@ objectClass: olcFrontendConfig
 olcDatabase: {-1}frontend
 olcAccess: {0}to dn.base=""  by * read
 olcAccess: {1}to dn.base="cn=subschema"  by * read
-olcAccess: {2}to attrs=userPassword  by group/groupOfNames/member.exact="cn=admin,ou=groups,CONFIG_SUFFIX" =wxd  by self =wxd  by * auth
-olcAccess: {3}to *  by group/groupOfNames/member.exact="cn=admin,ou=groups,CONFIG_SUFFIX" write  by users read
 olcAddContentAcl: FALSE
 olcLastMod: TRUE
 olcLastBind: TRUE
-olcLimits: {0}group/groupOfNames/member="cn=admin,ou=groups,CONFIG_SUFFIX" size=unlimited  time=unlimited
 olcMaxDerefDepth: 0
 olcReadOnly: FALSE
 olcSchemaDN: cn=Subschema
@@ -248,7 +245,8 @@ olcPasswordHash: {ARGON2}
 dn: olcDatabase={0}config,cn=config
 objectClass: olcDatabaseConfig
 olcDatabase: {0}config
-olcAccess: {0}to *  by * none
+olcAccess: {0}to attrs=userPassword  by dn.base="gidNumber=0+uidNumber=0,cn=peercred,cn=external,cn=auth" =wxd  by * auth
+olcAccess: {1}to *  by dn.base="gidNumber=0+uidNumber=0,cn=peercred,cn=external,cn=auth" manage
 olcAddContentAcl: TRUE
 olcLastMod: TRUE
 olcLastBind: TRUE
@@ -264,9 +262,12 @@ objectClass: olcDatabaseConfig
 objectClass: olcMdbConfig
 olcDatabase: {1}mdb
 olcSuffix: CONFIG_SUFFIX
+olcAccess: {0}to attrs=userPassword  by dn.base="gidNumber=0+uidNumber=0,cn=peercred,cn=external,cn=auth" =wxd  by group/groupOfNames/member.exact="cn=admin,ou=groups,CONFIG_SUFFIX" =wxd  by self =wxd  by * auth
+olcAccess: {1}to *  by dn.base="gidNumber=0+uidNumber=0,cn=peercred,cn=external,cn=auth" manage  by group/groupOfNames/member.exact="cn=admin,ou=groups,CONFIG_SUFFIX" write  by users read
 olcAddContentAcl: FALSE
 olcLastMod: TRUE
 olcLastBind: TRUE
+olcLimits: {0}group/groupOfNames/member="cn=admin,ou=groups,CONFIG_SUFFIX" size=unlimited  time=unlimited
 olcMaxDerefDepth: 15
 olcReadOnly: FALSE
 olcRootDN: CONFIG_MANAGERROOTDN
@@ -317,11 +318,13 @@ olcUniqueURI: ldap:///?mail?sub?
 dn: olcDatabase={2}monitor,cn=config
 objectClass: olcDatabaseConfig
 olcDatabase: {2}monitor
+olcAccess: {0}to *  by dn.base="gidNumber=0+uidNumber=0,cn=peercred,cn=external,cn=auth" manage
 olcAddContentAcl: FALSE
 olcLastMod: TRUE
 olcLastBind: TRUE
 olcMaxDerefDepth: 15
 olcReadOnly: FALSE
+olcRootDN: cn=monitor
 olcSyncUseSubentry: FALSE
 olcMonitoring: FALSE
 

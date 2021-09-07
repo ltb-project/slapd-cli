@@ -1428,6 +1428,8 @@ import_flat_config_template() {
 	replace_pattern "CONFIG_MANAGERROOTPW" "$( compute_hash ${CONFIG_MANAGERROOTPW} )" "${CONFIG_FILE_PATH}"
 	replace_pattern "CONFIG_CONFIGROOTDN" "${CONFIG_CONFIGROOTDN}" "${CONFIG_FILE_PATH}"
 	replace_pattern "CONFIG_CONFIGROOTPW" "$( compute_hash ${CONFIG_CONFIGROOTPW} )" "${CONFIG_FILE_PATH}"
+	replace_pattern "CONFIG_MONITORROOTDN" "${CONFIG_MONITORROOTDN}" "${CONFIG_FILE_PATH}"
+	replace_pattern "CONFIG_MONITORROOTPW" "$( compute_hash ${CONFIG_MONITORROOTPW} )" "${CONFIG_FILE_PATH}"
 	replace_pattern "CONFIG_SUFFIX" "${CONFIG_SUFFIX}" "${CONFIG_FILE_PATH}"
 	replace_pattern "CONFIG_DATADIR" "${CONFIG_DATADIR}" "${CONFIG_FILE_PATH}"
 
@@ -1473,6 +1475,8 @@ import_ldif_config_template() {
 	replace_pattern "CONFIG_MANAGERROOTPW" "$( compute_hash ${CONFIG_MANAGERROOTPW} )" "${CONFIG_FILE_PATH}"
 	replace_pattern "CONFIG_CONFIGROOTDN" "${CONFIG_CONFIGROOTDN}" "${CONFIG_FILE_PATH}"
 	replace_pattern "CONFIG_CONFIGROOTPW" "$( compute_hash ${CONFIG_CONFIGROOTPW} )" "${CONFIG_FILE_PATH}"
+	replace_pattern "CONFIG_MONITORROOTDN" "${CONFIG_MONITORROOTDN}" "${CONFIG_FILE_PATH}"
+	replace_pattern "CONFIG_MONITORROOTPW" "$( compute_hash ${CONFIG_MONITORROOTPW} )" "${CONFIG_FILE_PATH}"
 	replace_pattern "CONFIG_SUFFIX" "${CONFIG_SUFFIX}" "${CONFIG_FILE_PATH}"
 	replace_pattern "CONFIG_DATADIR" "${CONFIG_DATADIR}" "${CONFIG_FILE_PATH}"
 	if [ ! -z ${SLAPD_CONF+x} ] && [ "${SLAPD_CONF}" != "" ]; then
