@@ -1637,6 +1637,9 @@ build_config_template() {
 	if [ ! -z ${CONFIG_CONFIGROOTDN+x} ] && [ "${CONFIG_CONFIGROOTDN}" != "" ]; then
 		sed -i -e "s/^olcRootDN: ${CONFIG_CONFIGROOTDN}$/olcRootDN: CONFIG_CONFIGROOTDN\nolcRootPW: CONFIG_CONFIGROOTPW/" "$2"
 	fi
+	if [ ! -z ${CONFIG_MONITORROOTDN+x} ] && [ "${CONFIG_MONITORROOTDN}" != "" ]; then
+		sed -i -e "s/^olcRootDN: ${CONFIG_MONITORROOTDN}$/olcRootDN: CONFIG_MONITORROOTDN\nolcRootPW: CONFIG_MONITORROOTPW/" "$2"
+	fi
 
 	# replace olcDbDirectory by the given placeholder
 	if [ ! -z ${CONFIG_DATADIR+x} ] && [ "${CONFIG_DATADIR}" != "" ]; then
