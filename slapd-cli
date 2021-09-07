@@ -768,12 +768,16 @@ slapd_status() {
 # Try to get slapd version by searching in cn=monitor as anonymous
 # else, get it by launching slapd process with -V
 slapd_version() {
-	# Assume service is opened at least on localhost
-	HOST="ldap://localhost:${PORT:-389}/"
+	# Assume service is opened at ldapi:///, and external authentication as root is allowed
+	HOST="ldapi://${LDAPI_SOCKETURL}"
 	BASE="cn=monitor"
 	ATTR="monitoredInfo"
 	SCOPE="base"
-	VERSION=$( ${LDAPSEARCH_BIN} -x -H "${HOST}" -b "${BASE}" -s "${SCOPE}" -LLL "${ATTR}" 2>/dev/null| grep "${ATTR}" )
+
+	# test if SLAPD_SERVICES contains an ldapi:/// listening port
+	if echo "${SLAPD_SERVICES}" | grep -q 'ldapi:' ; then
+		VERSION=$( ${LDAPSEARCH_BIN} -Y EXTERNAL -H "${HOST}" -b "${BASE}" -s "${SCOPE}" -LLL "${ATTR}" 2>/dev/null| grep "${ATTR}" )
+	fi
 
 	if [ "${VERSION}" = "" ] ; then
 		if [ ! -z ${SLAPD_BIN+x} ] && [ "${SLAPD_BIN}" != "" ] ; then
