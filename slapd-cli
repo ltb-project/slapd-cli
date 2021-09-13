@@ -961,6 +961,11 @@ backup() {
 			dir=`basename $dbdir`
 			file="$BACKUP_PATH/$dir-$BACKUP_SUFFIX"
 
+			if [ ! -d "${dbdir}" ] || [ -z "$( ls -A ${dbdir} )" ]; then
+				message "info" "[INFO] No data in ${dbdir}, don't do any backup"
+				continue
+			fi
+
 			# slapcat
 			if [ -z "$SU" ]
 			then
