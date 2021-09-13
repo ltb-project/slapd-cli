@@ -1987,7 +1987,6 @@ case $1 in
 	backup
 	stop_slapd
 	import_data_template
-	start_slapd
 	;;
 	lloadstart)
 	start_lload
