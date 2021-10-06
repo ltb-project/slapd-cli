@@ -94,7 +94,7 @@ MASK="0027"
 OS=`uname -s`   # To adapt message printing
 MYUID=`id -u`     # For UNIX compatibility => modify this command
 MYGID=`id -g`     # For UNIX compatibility => modify this command
-declare -a PROVIDER
+declare -A PROVIDER
 
 # Return functions' value
 RETVAL=""
@@ -350,11 +350,11 @@ display_usage() {
 start_slapd() {
 
 	# $1: debug level
-	
+
 	# Exit 0 if slapd is already running
 	# LSB compliance
 	slapd_status
-	
+
 	if [ $? -eq 0 ]
 	then 
 		message "info" "[OK] OpenLDAP is already running"
@@ -484,11 +484,11 @@ stop_slapd() {
 start_lload() {
 
 	# $1: debug level
-	
+
 	# Exit 0 if lload is already running
 	# LSB compliance
 	lload_status
-	
+
 	if [ $? -eq 0 ]
 	then 
 		message "info" "[OK] lload is already running"
@@ -1227,43 +1227,63 @@ get_provider_config() {
 	i=0
 	if [ "$SLAPD_CONF_DIR" ]
 	then
-		# Get list of provider
-		PROVIDERS=$( $SLAPCAT_BIN -n0 -F "$SLAPD_CONF_DIR" -o ldif-wrap=no | grep -E '^olcSyncrepl' )
-		while echo $PROVIDERS | grep -q -E '^olcSyncrepl'
+		# get all file in a DUMP variable
+		DUMP="$( $SLAPCAT_BIN -n0 -F "$SLAPD_CONF_DIR" -o ldif-wrap=no )"
+		# parse DUMP variable for getting providers
+		SUF=""
+		while read -r LINE
 		do
-			# deletes first syncrepl keyword
-			PROVIDERS=$( echo $PROVIDERS | sed -e 's/^olcSyncrepl//' )
-			# store first provider found
-			PROVIDER[$i]=$( echo $PROVIDERS | sed -e 's/olcSyncrepl.*$//' )
-			# delete first provider from list of providers
-			PROVIDERS=$( echo $PROVIDERS | sed -e 's/^.*\(olcSyncrepl.*\)$/\1/' )
-
-			i=$[i+1]
-		done
+			if printf "$LINE" | grep -q -P '^olcSuffix:[ \t]+' ; then
+				SUF="$( printf "$LINE" | sed -e 's/^olcSuffix:[ \t]\+//' -e 's/"//g' )"
+			fi
+			if printf "$LINE" | grep -q -P '^olcSyncrepl:[ \t]+' ; then
+				# add detected provider to the list of detected providers for this suffix (\n separated)
+				PROVIDER[${SUF}]="${PROVIDER[$SUF]}\n$( printf "${LINE}" | sed -e 's/olcSyncrepl:[ \t]\+{*[0-9]*}*//' )"
+				# remove starting \n
+				PROVIDER[${SUF}]="$( printf "${PROVIDER[${SUF}]}" | sed -e ':a;N;$!ba;s/^\n//g' )"
+			fi
+		done <<< "${DUMP}"
 
 	elif [ "$SLAPD_CONF" ]
 	then
-		# Get list of provider
-		PROVIDERS=$( sed -n '/^syncrepl/,/^([^ \t]|$)/p' $SLAPD_CONF )
-		while echo $PROVIDERS | grep -q -E '^syncrepl'
+		# get all file in a DUMP variable
+		DUMP=""
+		while IFS= read -r LINE
 		do
-			# deletes first syncrepl keyword
-			PROVIDERS=$( echo $PROVIDERS | sed -e 's/^syncrepl//' )
-			# store first provider found
-			PROVIDER[$i]=$( echo $PROVIDERS | sed -e 's/syncrepl.*$//' )
-			# delete first provider from list of providers
-			PROVIDERS=$( echo $PROVIDERS | sed -e 's/^.*\(syncrepl.*\)$/\1/')
-
-			i=$[i+1]
-		done
+			# unwrap file (ie, join lines that begins with space or tab
+			if printf "$LINE" | grep -q -P '^[ \t]+' ; then
+				# remove starting space or tab
+				LINE=$( printf "${LINE}" | sed -e 's/^[ \t]\+//g' )
+				DUMP=$( printf "${DUMP} ${LINE}" )
+			else
+				DUMP=$( printf "${DUMP}\n${LINE}" )
+			fi
+		done < "$SLAPD_CONF"
+		# parse DUMP variable for getting providers
+		SUF=""
+		while read -r LINE
+		do
+			if printf "$LINE" | grep -q -P '^suffix[ \t]+' ; then
+				SUF="$( printf "$LINE" | sed -e 's/^suffix[ \t]\+//' -e 's/"//g' )"
+			fi
+			if printf "$LINE" | grep -q -P '^syncrepl[ \t]+' ; then
+				# add detected provider to the list of detected providers for this suffix (\n separated)
+				PROVIDER[${SUF}]="${PROVIDER[$SUF]}\n$( printf "${LINE}" | sed -e 's/syncrepl[ \t]\+//' )"
+				# remove starting \n
+				PROVIDER[${SUF}]="$( printf "${PROVIDER[${SUF}]}" | sed -e ':a;N;$!ba;s/^\n//g' )"
+			fi
+		done <<< "${DUMP}"
 	fi
+	for key in "${!PROVIDER[@]}"; do
+		printf "Suffix: ${key}\n"
+		printf "detected providers:\n${PROVIDER[$key]}\n\n"
+	done
 }
+
 
 check_sync() {
 	message "info" "[INFO] Checking synchronization..."
 	get_provider_config
-	get_confvalues "suffix"
-	SUFFIX=$RETVAL
 	RES=0 # result OK by default (if nothing to check, sync=OK)
 
 	# Is there any provider configuration?
@@ -1272,77 +1292,78 @@ check_sync() {
 		exit $RES
 	fi
 
-	# Parse PROVIDERS
-	for index in "${!PROVIDER[@]}"
-	do
-		PROVIDER[$index]=$( echo "${PROVIDER[$index]}" | sed -e 's/#.*$//g' )
-		# get provider config parameters
-		syncrepl_get_value "${PROVIDER[$index]}" "provider"
-		PHOST=$RETVAL
-		syncrepl_get_value "${PROVIDER[$index]}" "binddn"
-		PBINDDN=$RETVAL
-		syncrepl_get_value "${PROVIDER[$index]}" "credentials"
-		PBINDPW=$RETVAL
-		syncrepl_get_value "${PROVIDER[$index]}" "searchbase"
-		PBASEDN=$RETVAL
-		echo "Checking host ${PHOST}"
-		# Get remote provider contextCSN (one contextCSN per line)
-		CONTEXTCSN=$( ${LDAPSEARCH_BIN} -x -H "${PHOST}" -D "${PBINDDN}" -w "${PBINDPW}" -b "${PBASEDN}" -o nettimeout=5 -s base contextCSN -LLL 2>/dev/null )
+	for SUFFIX in "${!PROVIDER[@]}"; do
 
-		# Checking status of previous command
-		if [ $? -ne 0 ]; then
-			echo "    ERROR: search on remote host impossible!"
-			let "RES=-1"
-			break
-		fi
-		CONTEXTCSN=$( echo "$CONTEXTCSN" | grep contextCSN | sed -e 's/^contextCSN: //i' )
+		# Parse PROVIDERS
+		while IFS= read -r PROV
+		do
+			# get provider config parameters
+			syncrepl_get_value "${PROV}" "provider"
+			PHOST=$RETVAL
+			syncrepl_get_value "${PROV}" "binddn"
+			PBINDDN=$RETVAL
+			syncrepl_get_value "${PROV}" "credentials"
+			PBINDPW=$RETVAL
+			syncrepl_get_value "${PROV}" "searchbase"
+			PBASEDN=$RETVAL
+			echo "Checking contextCSN for suffix ${SUFFIX} on remote host ${PHOST}"
+			# Get remote provider contextCSN (one contextCSN per line)
+			CONTEXTCSN=$( ${LDAPSEARCH_BIN} -x -H "${PHOST}" -D "${PBINDDN}" -w "${PBINDPW}" -b "${PBASEDN}" -o nettimeout=5 -s base contextCSN -LLL 2>/dev/null )
 
-		# get local contextCSN
-		# TODO: improve this test to check via ldapsearch (need manager account)
-		if [ "$SLAPD_CONF_DIR" ]; then
-			localContextCSN=$( $SLAPCAT_BIN -b $SUFFIX -F "$SLAPD_CONF_DIR" -o ldif-wrap=no 2>/dev/null | head -n 100 | sed -e '/^$/,$d' | grep 'contextCSN' | sed -e 's/^contextCSN: //' )
-		elif [ "$SLAPD_CONF" ]; then
-			localContextCSN=$( $SLAPCAT_BIN -b $SUFFIX -f "$SLAPD_CONF" -o ldif-wrap=no 2>/dev/null | head -n 100 | sed -e '/^$/,$d' | grep 'contextCSN' | sed -e 's/^contextCSN: //' )
-		else
-			echo "No acceptable configuration found"
-			exit 1
-		fi
+			# Checking status of previous command
+			if [ $? -ne 0 ]; then
+				echo "    ERROR: search on remote host impossible!"
+				let "RES=-1"
+				break
+			fi
+			CONTEXTCSN=$( echo "$CONTEXTCSN" | grep contextCSN | sed -e 's/^contextCSN: //i' )
 
-		# compare contextCSN values
-		# for each provider contextCSN
-		for CSN in $CONTEXTCSN; do
-			#  identify sid part
-			#  contextCSN = 20171128170017.708386Z#000000#001#000000
-			#                                             ^^^
-			SID=$( echo ${CSN} | sed -e 's/^.*\(#[0-9]\+#\)[^#]*$/\1/' )
-			echo "  Checking SID ${SID}"
-			
-			#  check matching local slave ContextCSN
-			if echo "$localContextCSN" | grep -q "$SID" ; then
-				# get corresponding local slave contextCSN
-				matchingLocalContextCSN=$( echo -e "$localContextCSN" | grep "$SID" )
-				# Check if corresponding local slave contextCSN is identical to remote provider contextCSN
-				if echo "$matchingLocalContextCSN" | grep -q "$CSN" ; then
-					echo "    INFO: remote ($CSN) and local ($matchingLocalContextCSN) contextCSN found and synchronized"
+			# get local contextCSN
+			if [ "$SLAPD_CONF_DIR" ]; then
+				localContextCSN=$( $SLAPCAT_BIN -b $SUFFIX -F "$SLAPD_CONF_DIR" -o ldif-wrap=no 2>/dev/null | head -n 100 | sed -e '/^$/,$d' | grep 'contextCSN' | sed -e 's/^contextCSN: //' )
+			elif [ "$SLAPD_CONF" ]; then
+				localContextCSN=$( $SLAPCAT_BIN -b $SUFFIX -f "$SLAPD_CONF" -o ldif-wrap=no 2>/dev/null | head -n 100 | sed -e '/^$/,$d' | grep 'contextCSN' | sed -e 's/^contextCSN: //' )
+			else
+				echo "No acceptable configuration found"
+				exit 1
+			fi
+
+			# compare contextCSN values
+			# for each provider contextCSN
+			for CSN in $CONTEXTCSN; do
+				#  identify sid part
+				#  contextCSN = 20171128170017.708386Z#000000#001#000000
+				#                                             ^^^
+				SID=$( echo ${CSN} | sed -e 's/^.*\(#[0-9]\+#\)[^#]*$/\1/' )
+				echo "  Checking SID ${SID}"
+
+				#  check matching local slave ContextCSN
+				if echo "$localContextCSN" | grep -q "$SID" ; then
+					# get corresponding local slave contextCSN
+					matchingLocalContextCSN=$( echo -e "$localContextCSN" | grep "$SID" )
+					# Check if corresponding local slave contextCSN is identical to remote provider contextCSN
+					if echo "$matchingLocalContextCSN" | grep -q "$CSN" ; then
+						echo "    INFO: remote ($CSN) and local ($matchingLocalContextCSN) contextCSN found and synchronized"
+					else
+						echo "    ERROR: remote ($CSN) and local ($matchingLocalContextCSN) contextCSN found, but not synchronized!"
+						let "RES=RES+1"
+					fi
 				else
-					echo "    ERROR: remote ($CSN) and local ($matchingLocalContextCSN) contextCSN found, but not synchronized!"
+					echo "    ERROR: no matching local contextCSN ($localContextCSN) found for remote ($CSN) contextCSN!"
 					let "RES=RES+1"
 				fi
-			else
-				echo "    ERROR: no matching local contextCSN ($localContextCSN) found for remote ($CSN) contextCSN!"
-				let "RES=RES+1"
-			fi
-		done
+			done
 
-		# return result (OK|KO)
+			# return result (OK|KO)
+		done <<< "${PROVIDER[$SUFFIX]}"
+		if [[ "$RES" -eq "0" ]]; then
+			message "info" "[OK] Local directory synchronized to every declared provider"
+		elif [[ "$RES" -eq "-1" ]]; then
+			message "error" "[KO] Error while checking synchronization"
+		else
+			message "error" "[KO] Local directory not synchronized to one of its declared providers"
+		fi
 	done
-	if [[ "$RES" -eq "0" ]]; then
-		message "info" "[OK] Local directory synchronized to every declared provider"
-	elif [[ "$RES" -eq "-1" ]]; then
-		message "error" "[KO] Error while checking synchronization"
-	else
-		message "error" "[KO] Local directory not synchronized to one of its declared providers"
-	fi
 	exit $RES
 }
 
