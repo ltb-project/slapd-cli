@@ -1275,7 +1275,7 @@ check_sync() {
 	# Parse PROVIDERS
 	for index in "${!PROVIDER[@]}"
 	do
-		PROVIDER[$index]=$( echo "${PROVIDER[index]}" | sed -e 's/#.*$//g' )
+		PROVIDER[$index]=$( echo "${PROVIDER[$index]}" | sed -e 's/#.*$//g' )
 		# get provider config parameters
 		syncrepl_get_value "${PROVIDER[$index]}" "provider"
 		PHOST=$RETVAL
