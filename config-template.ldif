@@ -2,7 +2,7 @@ dn: cn=config
 objectClass: olcGlobal
 cn: config
 olcConfigFile: /usr/local/openldap/etc/openldap/slapd.conf
-olcConfigDir: /usr/local/openldap/etc/openldap/slapd.d
+olcConfigDir: /tmp/slapd.d-tmp
 olcArgsFile: /usr/local/openldap/var/run/slapd.args
 olcAttributeOptions: lang-
 olcAuthzPolicy: none
@@ -302,12 +302,11 @@ olcPPolicyForwardUpdates: FALSE
 olcPPolicyDisableWrite: FALSE
 olcPPolicySendNetscapeControls: FALSE
 
-dn: olcOverlay={1}memberof,olcDatabase={1}mdb,cn=config
+dn: olcOverlay={1}dynlist,olcDatabase={1}mdb,cn=config
 objectClass: olcOverlayConfig
-objectClass: olcMemberOfConfig
-olcOverlay: {1}memberof
-olcMemberOfDangling: ignore
-olcMemberOfRefInt: FALSE
+objectClass: olcDynListConfig
+olcOverlay: {1}dynlist
+olcDynListAttrSet: {0}groupOfURLs memberURL member+memberOf@groupOfNames
 
 dn: olcOverlay={2}unique,olcDatabase={1}mdb,cn=config
 objectClass: olcOverlayConfig
