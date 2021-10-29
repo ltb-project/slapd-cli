@@ -19,6 +19,8 @@ olcIndexHash64: FALSE
 olcIndexIntLen: 4
 olcListenerThreads: 1
 olcLocalSSF: 71
+olcLogFile: CONFIG_LOGFILE
+olcLogFileRotate: 10 100 24
 olcLogLevel: CONFIG_LOGLEVEL
 olcMaxFilterDepth: 1000
 olcPidFile: /usr/local/openldap/var/run/slapd.pid

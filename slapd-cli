@@ -1454,6 +1454,7 @@ import_flat_config_template() {
 
 	replace_pattern "CONFIG_FQDN" "${CONFIG_FQDN}" "${CONFIG_FILE_PATH}"
 	replace_pattern "CONFIG_LOGLEVEL" "${CONFIG_LOGLEVEL}" "${CONFIG_FILE_PATH}"
+	replace_pattern "CONFIG_LOGFILE" "${CONFIG_LOGFILE}" "${CONFIG_FILE_PATH}"
 	replace_pattern "CONFIG_MANAGERROOTDN" "${CONFIG_MANAGERROOTDN}" "${CONFIG_FILE_PATH}"
 	replace_pattern "CONFIG_MANAGERROOTPW" "$( compute_hash ${CONFIG_MANAGERROOTPW} )" "${CONFIG_FILE_PATH}"
 	replace_pattern "CONFIG_CONFIGROOTDN" "${CONFIG_CONFIGROOTDN}" "${CONFIG_FILE_PATH}"
@@ -1501,6 +1502,7 @@ import_ldif_config_template() {
 
 	replace_pattern "CONFIG_FQDN" "${CONFIG_FQDN}" "${CONFIG_FILE_PATH}"
 	replace_pattern "CONFIG_LOGLEVEL" "${CONFIG_LOGLEVEL}" "${CONFIG_FILE_PATH}"
+	replace_pattern "CONFIG_LOGFILE" "${CONFIG_LOGFILE}" "${CONFIG_FILE_PATH}"
 	replace_pattern "CONFIG_MANAGERROOTDN" "${CONFIG_MANAGERROOTDN}" "${CONFIG_FILE_PATH}"
 	replace_pattern "CONFIG_MANAGERROOTPW" "$( compute_hash ${CONFIG_MANAGERROOTPW} )" "${CONFIG_FILE_PATH}"
 	replace_pattern "CONFIG_CONFIGROOTDN" "${CONFIG_CONFIGROOTDN}" "${CONFIG_FILE_PATH}"
@@ -1678,6 +1680,9 @@ build_config_template() {
 
 	# replace olcLogLevel by the given placeholder
 	replace_pattern "^olcLogLevel: .*$" "olcLogLevel: CONFIG_LOGLEVEL" "${2}"
+
+	# replace olcLogFile by the given placeholder
+	replace_pattern "^olcLogFile: .*$" "olcLogFile: CONFIG_LOGFILE" "${2}"
 
 	# replace olcSaslHost by the given placeholder
 	replace_pattern "^olcSaslHost: .*$" "olcSaslHost: CONFIG_FQDN" "${2}"
