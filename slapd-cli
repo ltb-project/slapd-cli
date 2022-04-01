@@ -33,7 +33,7 @@
 #====================================================================
 # Version
 #====================================================================
-VERSION="2.8"
+VERSION="2.9"
 
 #====================================================================
 # CLI configuration file, for overloading every variable below
@@ -91,6 +91,7 @@ DEBUG_LEVEL="256" # Debug loglevel
 UMASK="umask"
 MASK="0027"
 
+SLAPD_VERSION="2.5" # OpenLDAP version: major.minor (don't include .patch)
 OS=`uname -s`   # To adapt message printing
 MYUID=`id -u`     # For UNIX compatibility => modify this command
 MYGID=`id -g`     # For UNIX compatibility => modify this command
@@ -1454,7 +1455,9 @@ import_flat_config_template() {
 
 	replace_pattern "CONFIG_FQDN" "${CONFIG_FQDN}" "${CONFIG_FILE_PATH}"
 	replace_pattern "CONFIG_LOGLEVEL" "${CONFIG_LOGLEVEL}" "${CONFIG_FILE_PATH}"
-	replace_pattern "CONFIG_LOGFILE" "${CONFIG_LOGFILE}" "${CONFIG_FILE_PATH}"
+	if [ "${SLAPD_VERSION}" = "2.6" ] || [ "${SLAPD_VERSION}" = "2.7" ]; then
+		replace_pattern "CONFIG_LOGFILE" "${CONFIG_LOGFILE}" "${CONFIG_FILE_PATH}"
+	fi
 	replace_pattern "CONFIG_MANAGERROOTDN" "${CONFIG_MANAGERROOTDN}" "${CONFIG_FILE_PATH}"
 	replace_pattern "CONFIG_MANAGERROOTPW" "$( compute_hash ${CONFIG_MANAGERROOTPW} )" "${CONFIG_FILE_PATH}"
 	replace_pattern "CONFIG_CONFIGROOTDN" "${CONFIG_CONFIGROOTDN}" "${CONFIG_FILE_PATH}"
@@ -1502,7 +1505,9 @@ import_ldif_config_template() {
 
 	replace_pattern "CONFIG_FQDN" "${CONFIG_FQDN}" "${CONFIG_FILE_PATH}"
 	replace_pattern "CONFIG_LOGLEVEL" "${CONFIG_LOGLEVEL}" "${CONFIG_FILE_PATH}"
-	replace_pattern "CONFIG_LOGFILE" "${CONFIG_LOGFILE}" "${CONFIG_FILE_PATH}"
+	if [ "${SLAPD_VERSION}" = "2.6" ] || [ "${SLAPD_VERSION}" = "2.7" ]; then
+		replace_pattern "CONFIG_LOGFILE" "${CONFIG_LOGFILE}" "${CONFIG_FILE_PATH}"
+	fi
 	replace_pattern "CONFIG_MANAGERROOTDN" "${CONFIG_MANAGERROOTDN}" "${CONFIG_FILE_PATH}"
 	replace_pattern "CONFIG_MANAGERROOTPW" "$( compute_hash ${CONFIG_MANAGERROOTPW} )" "${CONFIG_FILE_PATH}"
 	replace_pattern "CONFIG_CONFIGROOTDN" "${CONFIG_CONFIGROOTDN}" "${CONFIG_FILE_PATH}"
@@ -1682,7 +1687,9 @@ build_config_template() {
 	replace_pattern "^olcLogLevel: .*$" "olcLogLevel: CONFIG_LOGLEVEL" "${2}"
 
 	# replace olcLogFile by the given placeholder
-	replace_pattern "^olcLogFile: .*$" "olcLogFile: CONFIG_LOGFILE" "${2}"
+	if [ "${SLAPD_VERSION}" = "2.6" ] || [ "${SLAPD_VERSION}" = "2.7" ]; then
+		replace_pattern "^olcLogFile: .*$" "olcLogFile: CONFIG_LOGFILE" "${2}"
+	fi
 
 	# replace olcSaslHost by the given placeholder
 	replace_pattern "^olcSaslHost: .*$" "olcSaslHost: CONFIG_FQDN" "${2}"
