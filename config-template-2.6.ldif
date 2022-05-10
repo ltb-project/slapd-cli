@@ -300,6 +300,7 @@ objectClass: olcPPolicyConfig
 olcOverlay: {0}ppolicy
 olcPPolicyDefault: cn=default,ou=ppolicies,CONFIG_SUFFIX
 olcPPolicyHashCleartext: TRUE
+olcPPolicyCheckModule: /usr/local/openldap/libexec/openldap/ppm.so
 olcPPolicyUseLockout: FALSE
 olcPPolicyForwardUpdates: FALSE
 olcPPolicyDisableWrite: FALSE
