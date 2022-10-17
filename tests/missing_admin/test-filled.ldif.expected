@@ -1,0 +1,62 @@
+
+
+dn: ou=SG1,dc=my-domain,dc=com
+objectClass: organizationalUnit
+objectClass: top
+ou: SG1
+
+dn: ou=people,ou=SG1,dc=my-domain,dc=com
+objectClass: organizationalUnit
+objectClass: top
+ou: people
+
+dn: ou=groups,ou=SG1,dc=my-domain,dc=com
+objectClass: organizationalUnit
+objectClass: top
+ou: groups
+
+dn: ou=SG2,dc=my-domain,dc=com
+objectClass: organizationalUnit
+objectClass: top
+ou: SG2
+
+dn: ou=people,ou=SG2,dc=my-domain,dc=com
+objectClass: organizationalUnit
+objectClass: top
+ou: people
+
+dn: ou=groups,ou=SG2,dc=my-domain,dc=com
+objectClass: organizationalUnit
+objectClass: top
+ou: groups
+
+dn: cn=admin,ou=groups,DATA_SUFFIX
+objectClass: groupOfNames
+objectClass: top
+cn: admin
+member: DATA_SERVICEACCOUNT_DN
+
+
+dn: uid=samantha.carter,ou=people,dc=my-domain,dc=com
+objectClass: inetOrgPerson
+objectClass: organizationalPerson
+objectClass: person
+objectClass: top
+cn: Samantha Carter
+givenName: Samantha
+mail: samantha.carter@my-example.com
+sn: Carter
+uid: samantha.carter
+userPassword: hashed_password
+
+dn: uid=tealc,ou=people,dc=my-domain,dc=com
+objectClass: inetOrgPerson
+objectClass: organizationalPerson
+objectClass: person
+objectClass: top
+cn: TealC Jaffa
+givenName: TealC
+mail: tealc@my-example.com
+sn: Jaffa
+uid: tealc
+userPassword: hashed_password

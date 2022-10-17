@@ -213,109 +213,6 @@ syncrepl_get_value() {
 	fi
 }
 
-#====================================================================
-# Load specific parameters
-#====================================================================
-if [ -f ${CLI_CONF_FILE} ]
-then
-	. ${CLI_CONF_FILE}
-	message "info" "[INFO] Using ${CLI_CONF_FILE} for configuration"
-else
-	message "info" "[INFO] Using built-in configuration - this may cause some problems"
-fi
-
-# Use systemd to manage the service if it's present
-_use_systemctl=0
-
-# When systemd runs a shell script, bash sets PPID to 1 (init)
-if [ $PPID -ne 1 ] && \
-    # This variable lets the user disable systemd redirection
-    [ -z "$SYSTEMCTL_SKIP_REDIRECT" ] && \
-    # This tests whether systemd is currently managing the systemd
-    [ -d /run/systemd/system ] && \
-    # This variable is set when systemd >=232 runs a service
-    # We need this test in case systemd does not run the slapd-cli script
-    # directly (PPID>1) but runs it through /etc/init.d/slapd
-    [ -z "$INVOCATION_ID" ]  ;
-then
-	SYSTEMD_SERVICE_NAME=slapd-ltb
-	SYSTEMD_LLOAD_SERVICE_NAME=lload-ltb
-	_use_systemctl=1
-fi
-
-if [ "$SLAPD_USER" = "" ] ; then
-	PS_COMMAND_PID="ps -o pid -e"
-	PS_COMMAND_CMD="ps -o cmd -e"
-else
-	PS_COMMAND_PID="ps -o pid -u $SLAPD_USER"
-	PS_COMMAND_CMD="ps -o cmd -u $SLAPD_USER"
-fi
-
-
-#====================================================================
-# Initiate 'su' command
-#====================================================================
-if [ "$SLAPD_USER" -a $MYUID -eq 0 ]
-then
-	SU="su -s /bin/bash - $SLAPD_USER -c "
-fi
-
-#====================================================================
-# Initial checks
-#====================================================================
-
-# Make sure the pidfile directory exists with correct permissions
-piddir=`dirname "$SLAPD_PID_FILE"`
-if [ ! -d "$piddir" ]; then
-	mkdir -p "$piddir"
-	[ -z "$SLAPD_USER" ] || chown -R "$SLAPD_USER" "$piddir"
-	[ -z "$SLAPD_GROUP" ] || chgrp -R "$SLAPD_GROUP" "$piddir"
-fi
-
-# Rights to execute binaries
-for i in "$SLAPD_BIN" "$SLAPCAT_BIN" "$SLAPINDEX_BIN" "$SLAPTEST_BIN" "$LDAPSEARCH_BIN"
-do
-	if [ ! -x $i ]
-	then
-		message "alert" "[ALERT] Can't execute $i"
-		exit 1
-	fi
-done
-
-# Rights to read configuration
-if [ "$SLAPD_CONF" -a ! -r "$SLAPD_CONF" ]
-then
-	message "alert" "[ALERT] Can't read $SLAPD_CONF"
-	exit 1
-fi
-
-# Is there a configuration directory ?
-if [ "$SLAPD_CONF_DIR" -a ! -w "$SLAPD_CONF_DIR" ]
-then
-	message "alert" "[ALERT] Can't write to configuration directory $SLAPD_CONF_DIR"
-	exit 1
-fi
-
-# Are you root (for port < 1024)?
-if [ $PORT -lt 1024 -a $MYUID -ne 0 ]
-then
-	message "alert" "[ALERT] Only root can launch OpenLDAP on port $PORT"
-	exit 1
-fi
-
-# Create LDAPI socket
-if [ "$LDAPI_SOCKETDIR" -a ! -r "$LDAPI_SOCKETDIR" ]
-then
-    message "info" "[INFO] Create LDAPI socket dir $LDAPI_SOCKETDIR"
-    mkdir -p "$LDAPI_SOCKETDIR"
-    [ -z "$SLAPD_USER" ] || chown -R "$SLAPD_USER" "$LDAPI_SOCKETDIR"
-    [ -z "$SLAPD_GROUP" ] || chgrp -R "$SLAPD_GROUP" "$LDAPI_SOCKETDIR"
-fi
-
-#====================================================================
-# Functions
-#====================================================================
-
 display_usage() {
 	bold=$(tput bold)
 	normal=$(tput sgr0)
@@ -346,6 +243,141 @@ display_usage() {
 	printf "\n"
 
 }
+
+dryun=
+
+#====================================================================
+# Parameters switch
+#====================================================================
+while [[ $# > 0 ]]
+do
+    case $1 in
+        cli_conf_file)
+            shift
+            CLI_CONF_FILE=$1
+            ;;
+        help|usage)
+	    display_usage
+	    exit 1
+	    ;;
+        dryrun)
+            dryrun=dryrun
+            ;;
+        *)
+            # will be parsed as action
+            break
+            ;;
+    esac
+    shift
+done
+
+#====================================================================
+# Load specific parameters
+#====================================================================
+if [ -f ${CLI_CONF_FILE} ]
+then
+    . ${CLI_CONF_FILE}
+    message "info" "[INFO] Using ${CLI_CONF_FILE} for configuration"
+else
+    message "info" "[INFO] Using built-in configuration - this may cause some problems"
+fi
+
+if [[ -z $dryrun ]]
+then
+
+    # Use systemd to manage the service if it's present
+    _use_systemctl=0
+
+    # When systemd runs a shell script, bash sets PPID to 1 (init)
+    if [ $PPID -ne 1 ] && \
+           # This variable lets the user disable systemd redirection
+           [ -z "$SYSTEMCTL_SKIP_REDIRECT" ] && \
+               # This tests whether systemd is currently managing the systemd
+           [ -d /run/systemd/system ] && \
+               # This variable is set when systemd >=232 runs a service
+           # We need this test in case systemd does not run the slapd-cli script
+           # directly (PPID>1) but runs it through /etc/init.d/slapd
+           [ -z "$INVOCATION_ID" ]  ;
+    then
+	SYSTEMD_SERVICE_NAME=slapd-ltb
+	SYSTEMD_LLOAD_SERVICE_NAME=lload-ltb
+	_use_systemctl=1
+    fi
+
+    if [ "$SLAPD_USER" = "" ] ; then
+	PS_COMMAND_PID="ps -o pid -e"
+	PS_COMMAND_CMD="ps -o cmd -e"
+    else
+	PS_COMMAND_PID="ps -o pid -u $SLAPD_USER"
+	PS_COMMAND_CMD="ps -o cmd -u $SLAPD_USER"
+    fi
+
+
+    #====================================================================
+    # Initiate 'su' command
+    #====================================================================
+    if [ "$SLAPD_USER" -a $MYUID -eq 0 ]
+    then
+	SU="su -s /bin/bash - $SLAPD_USER -c "
+    fi
+
+    #====================================================================
+    # Initial checks
+    #====================================================================
+
+    # Make sure the pidfile directory exists with correct permissions
+    piddir=`dirname "$SLAPD_PID_FILE"`
+    if [ ! -d "$piddir" ]; then
+	mkdir -p "$piddir"
+	[ -z "$SLAPD_USER" ] || chown -R "$SLAPD_USER" "$piddir"
+	[ -z "$SLAPD_GROUP" ] || chgrp -R "$SLAPD_GROUP" "$piddir"
+    fi
+
+    # Rights to execute binaries
+    for i in "$SLAPD_BIN" "$SLAPCAT_BIN" "$SLAPINDEX_BIN" "$SLAPTEST_BIN" "$LDAPSEARCH_BIN"
+    do
+	if [ ! -x $i ]
+	then
+	    message "alert" "[ALERT] Can't execute $i"
+	    exit 1
+	fi
+    done
+
+    # Rights to read configuration
+    if [ "$SLAPD_CONF" -a ! -r "$SLAPD_CONF" ]
+    then
+	message "alert" "[ALERT] Can't read $SLAPD_CONF"
+	exit 1
+    fi
+
+    # Is there a configuration directory ?
+    if [ "$SLAPD_CONF_DIR" -a ! -w "$SLAPD_CONF_DIR" ]
+    then
+	message "alert" "[ALERT] Can't write to configuration directory $SLAPD_CONF_DIR"
+	exit 1
+    fi
+
+    # Are you root (for port < 1024)?
+    if [ $PORT -lt 1024 -a $MYUID -ne 0 ]
+    then
+	message "alert" "[ALERT] Only root can launch OpenLDAP on port $PORT"
+	exit 1
+    fi
+
+    # Create LDAPI socket
+    if [ "$LDAPI_SOCKETDIR" -a ! -r "$LDAPI_SOCKETDIR" ]
+    then
+        message "info" "[INFO] Create LDAPI socket dir $LDAPI_SOCKETDIR"
+        mkdir -p "$LDAPI_SOCKETDIR"
+        [ -z "$SLAPD_USER" ] || chown -R "$SLAPD_USER" "$LDAPI_SOCKETDIR"
+        [ -z "$SLAPD_GROUP" ] || chgrp -R "$SLAPD_GROUP" "$LDAPI_SOCKETDIR"
+    fi
+fi
+
+#====================================================================
+# Functions
+#====================================================================
+
 
 
 start_slapd() {
@@ -1703,33 +1735,11 @@ build_config_template() {
 
 }
 
+generate_data_admin_template() {
 
-import_data_template() {
-	message "info" "[INFO] Import test data..."
-
-	if [ -z ${DATA_TEMPLATE_FILE+x} ] || [ "${DATA_TEMPLATE_FILE}" = "" ]; then
-		message "alert" "[ALERT] No DATA_TEMPLATE_FILE variable defined"
-	fi
-
-
-
-	# Prepare template for replacement
-	DATA_TEMPLATE_PATH="${CLI_CONF_FILE%/*}/${DATA_TEMPLATE_FILE}"
-	if [ -f ${DATA_TEMPLATE_PATH} ]
-	then
-		message "info" "[INFO] Using ${DATA_TEMPLATE_PATH} as template"
-	else
-		message "error" "[ERROR] No data template found at ${DATA_TEMPLATE_PATH}"
-		exit 1
-	fi
-
-	DATA_FILE_PATH="${DATA_TEMPLATE_PATH%.ldif}-filled.ldif"
-	cp -f ${DATA_TEMPLATE_PATH} ${DATA_FILE_PATH}
-	chown $SLAPD_USER:$SLAPD_GROUP ${DATA_FILE_PATH}
-	chmod 640 ${DATA_FILE_PATH}
-
-
-	# Add new admins
+    local DATA_FILE_PATH="$1"
+    
+    	# Add new admins
 	DATA_ADMINS=$( set | grep -E '^DATA_ADMIN_' | sed -e 's/^DATA_ADMIN_\([^_]\+\)_.*/\1/' | sort -u )
 	for DATA_ADMIN in ${DATA_ADMINS}; do
 		eval DATA_ADMIN_DN="\$DATA_ADMIN_${DATA_ADMIN}_DN"
@@ -1762,14 +1772,24 @@ memberOf: cn=admin,ou=groups,DATA_SUFFIX" >> ${DATA_FILE_PATH}
 
 			MEMBER="member: ${DATA_ADMIN_DN}
 ${MEMBER}"
+                else
+                    collect_missing=''
+                    for suffix in _DN _PW _UID _SN _GN _MAIL
+                    do
+                        eval data="\$DATA_ADMIN_${DATA_ADMIN}$suffix"
+                        [[ -z $data ]] && collect_missing="DATA_ADMIN_${DATA_ADMIN}$suffix "$collect_missing
+                    done
+                    if [[ -n $collect_missing ]]
+                    then
+                        message 'warning' "[WARNING] for ${DATA_ADMIN} some values are missing ( $collect_missing) preventing admin to be created"
+                    fi
 		fi
 
 	done
 
-
 	# create new organizations and add people and groups branches inside
 	if [ ! -z ${DATA_ORGANIZATIONS+x} ] ; then
-		ORGS=${DATA_ORGANIZATIONS}, # adds final separator
+	        ORGS=${DATA_ORGANIZATIONS}, # adds final separator            
 		while [ ${ORGS} ]; do
 			o="${ORGS%%,*}" # get current organization
 			message "info" "[INFO] Adding organization ${o}"
@@ -1787,25 +1807,28 @@ ou: people
 dn: ou=groups,ou=${o},${DATA_SUFFIX}
 objectClass: organizationalUnit
 objectClass: top
-ou: groups
-
+ou: groups" >> ${DATA_FILE_PATH}
+                        if [[ -n $MEMBER ]]
+                        then
+                            printf "%s" "
 dn: cn=admin,ou=groups,ou=${o},${DATA_SUFFIX}
 objectClass: groupOfNames
 objectClass: top
 cn: admin
 $MEMBER" >> ${DATA_FILE_PATH}
-
-			# Add corresponding memberOf
-			for DATA_ADMIN in ${DATA_ADMINS}; do
+			    # Add corresponding memberOf
+			    for DATA_ADMIN in ${DATA_ADMINS}; do
 				eval DATA_ADMIN_DN="\$DATA_ADMIN_${DATA_ADMIN}_DN"
 				sed -i -e "/^dn: ${DATA_ADMIN_DN}/amemberOf: cn=admin,ou=groups,ou=${o},${DATA_SUFFIX}" ${DATA_FILE_PATH}
-			done
+			    done
+                        else
+                            message 'warning' "[WARNING] Can't create dn: cn=admin,ou=groups,ou=${o},${DATA_SUFFIX} since there is no member to add in"
+                        fi
 
 			# remove current organization from list
 			ORGS=${ORGS#*,};
 		done;
 	fi
-
 
 	# Add admin group
 	MEMBER="member: DATA_SERVICEACCOUNT_DN
@@ -1847,10 +1870,45 @@ sn: ${DATA_USER_SN}
 uid: ${DATA_USER_UID}
 userPassword: ${DATA_USER_PW_HASH}" >> ${DATA_FILE_PATH}
 
-
+                else
+                    collect_missing=''
+                    for suffix in _DN _PW _UID _SN _GN _MAIL
+                    do
+                        eval data="\$DATA_USER_${DATA_USER}$suffix"
+                        [[ -z $data ]] && collect_missing="DATA_USER_${DATA_USER}$suffix "$collect_missing
+                    done
+                    if [[ -n $collect_missing ]]
+                    then
+                        message 'warning' "[WARNING] for ${DATA_USER} some values are missing ( $collect_missing) preventing user to be created"
+                    fi
 		fi
 
 	done
+}
+
+import_data_template() {
+	message "info" "[INFO] Import test data..."
+
+	if [ -z ${DATA_TEMPLATE_FILE+x} ] || [ "${DATA_TEMPLATE_FILE}" = "" ]; then
+		message "alert" "[ALERT] No DATA_TEMPLATE_FILE variable defined"
+	fi
+
+	# Prepare template for replacement
+	DATA_TEMPLATE_PATH="${CLI_CONF_FILE%/*}/${DATA_TEMPLATE_FILE}"
+	if [ -f ${DATA_TEMPLATE_PATH} ]
+	then
+		message "info" "[INFO] Using ${DATA_TEMPLATE_PATH} as template"
+	else
+		message "error" "[ERROR] No data template found at ${DATA_TEMPLATE_PATH}"
+		exit 1
+	fi
+
+	DATA_FILE_PATH="${DATA_TEMPLATE_PATH%.ldif}-filled.ldif"
+	cp -f ${DATA_TEMPLATE_PATH} ${DATA_FILE_PATH}
+	chown $SLAPD_USER:$SLAPD_GROUP ${DATA_FILE_PATH}
+	chmod 640 ${DATA_FILE_PATH}
+
+        generate_data_admin_template "${DATA_FILE_PATH}"
 
 	# Adapt LDAP suffix
 	message "info" "[INFO] Using suffix ${DATA_SUFFIX}"
@@ -2030,6 +2088,10 @@ case $1 in
 	lloadstatus)
 	display_lload_status
 	;;
+        # for testing purposes
+        generate_data_admin_template)
+            generate_data_admin_template "${CLI_CONF_FILE%/*}/test-filled.ldif"
+            ;;
 	*)
 	display_usage
 	exit 1

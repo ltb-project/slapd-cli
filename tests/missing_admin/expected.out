@@ -1,0 +1,9 @@
+slapd-cli: [INFO] Using /home/philha/worteks/dev/ltb/openldap-initscript/tests/missing_admin/slapd-cli.conf for configuration
+slapd-cli: [WARNING] for DJACKSON some values are missing ( DATA_ADMIN_DJACKSON_GN ) preventing admin to be created
+slapd-cli: [INFO] Adding organization SG1
+slapd-cli: [WARNING] Can't create dn: cn=admin,ou=groups,ou=SG1,dc=my-domain,dc=com since there is no member to add in
+slapd-cli: [INFO] Adding organization SG2
+slapd-cli: [WARNING] Can't create dn: cn=admin,ou=groups,ou=SG2,dc=my-domain,dc=com since there is no member to add in
+slapd-cli: [WARNING] for JONEILL some values are missing ( DATA_USER_JONEILL_MAIL ) preventing user to be created
+slapd-cli: [INFO] Adding user SCARTER: uid=samantha.carter, gn=Samantha, sn=Carter, mail=samantha.carter@my-example.com, pass=hashed_password
+slapd-cli: [INFO] Adding user TEALC: uid=tealc, gn=TealC, sn=Jaffa, mail=tealc@my-example.com, pass=hashed_password

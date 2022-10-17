@@ -1,0 +1,7 @@
+slapd-cli: [INFO] Using /home/philha/worteks/dev/ltb/openldap-initscript/tests/default/slapd-cli.conf for configuration
+slapd-cli: [INFO] Adding admin DJACKSON: uid=daniel.jackson, gn=Daniel, sn=Jackson, mail=daniel.jackson@my-example.com, pass=hashed_password
+slapd-cli: [INFO] Adding organization SG1
+slapd-cli: [INFO] Adding organization SG2
+slapd-cli: [INFO] Adding user JONEILL: uid=jack.oneill, gn=Jack, sn=O Neill, mail=jack.oneill@my-example.com, pass=hashed_password
+slapd-cli: [INFO] Adding user SCARTER: uid=samantha.carter, gn=Samantha, sn=Carter, mail=samantha.carter@my-example.com, pass=hashed_password
+slapd-cli: [INFO] Adding user TEALC: uid=tealc, gn=TealC, sn=Jaffa, mail=tealc@my-example.com, pass=hashed_password
