@@ -1800,6 +1800,14 @@ memberOf: cn=admin,ou=groups,DATA_SUFFIX" >> ${DATA_FILE_PATH}
 
 			MEMBER="member: ${DATA_ADMIN_DN}
 ${MEMBER}"
+		else
+			collect_missing=''
+			for ATTR_SUFFIX in DN PW UID SN GN MAIL
+			do
+				eval data="\$DATA_ADMIN_${DATA_ADMIN}_${ATTR_SUFFIX}"
+				[[ -z $data ]] && collect_missing="DATA_ADMIN_${DATA_ADMIN}_${ATTR_SUFFIX} "${collect_missing}
+			done
+			[[ -n ${collect_missing} ]] && message 'warning' "[WARNING] Some values are missing (${collect_missing}) preventing admin ${DATA_ADMIN} to be created"
 		fi
 
 	done
@@ -1825,19 +1833,25 @@ ou: people
 dn: ou=groups,ou=${o},${DATA_SUFFIX}
 objectClass: organizationalUnit
 objectClass: top
-ou: groups
+ou: groups" >> ${DATA_FILE_PATH}
 
+			if [[ -n $MEMBER ]]
+			then
+				printf "\n%s" "
 dn: cn=admin,ou=groups,ou=${o},${DATA_SUFFIX}
 objectClass: groupOfNames
 objectClass: top
 cn: admin
 $MEMBER" >> ${DATA_FILE_PATH}
 
-			# Add corresponding memberOf
-			for DATA_ADMIN in ${DATA_ADMINS}; do
-				eval DATA_ADMIN_DN="\$DATA_ADMIN_${DATA_ADMIN}_DN"
-				sed -i -e "/^dn: ${DATA_ADMIN_DN}/amemberOf: cn=admin,ou=groups,ou=${o},${DATA_SUFFIX}" ${DATA_FILE_PATH}
-			done
+				# Add corresponding memberOf
+				for DATA_ADMIN in ${DATA_ADMINS}; do
+					eval DATA_ADMIN_DN="\$DATA_ADMIN_${DATA_ADMIN}_DN"
+					sed -i -e "/^dn: ${DATA_ADMIN_DN}/amemberOf: cn=admin,ou=groups,ou=${o},${DATA_SUFFIX}" ${DATA_FILE_PATH}
+				done
+			else
+				message 'warning' "[WARNING] Can't create dn: cn=admin,ou=groups,ou=${o},${DATA_SUFFIX} since there is no member to add in"
+			fi
 
 			# remove current organization from list
 			ORGS=${ORGS#*,};
@@ -1885,6 +1899,14 @@ sn: ${DATA_USER_SN}
 uid: ${DATA_USER_UID}
 userPassword: ${DATA_USER_PW_HASH}" >> ${DATA_FILE_PATH}
 
+		else
+			collect_missing=''
+			for ATTR_SUFFIX in DN PW UID SN GN MAIL
+			do
+				eval data="\$DATA_USER_${DATA_USER}_${ATTR_SUFFIX}"
+				[[ -z $data ]] && collect_missing="DATA_USER_${DATA_USER}_${ATTR_SUFFIX} "$collect_missing
+			done
+			[[ -n $collect_missing ]] && message 'warning' "[WARNING] Some values are missing ($collect_missing) preventing user ${DATA_USER} to be created"
 
 		fi
 
