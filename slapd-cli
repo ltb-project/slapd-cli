@@ -96,6 +96,7 @@ OS=`uname -s`   # To adapt message printing
 MYUID=`id -u`     # For UNIX compatibility => modify this command
 MYGID=`id -g`     # For UNIX compatibility => modify this command
 declare -A PROVIDER
+TOLERANCE_CSN=1000000 # 1s of tolerance when comparing contextCSN
 
 # Return functions' value
 RETVAL=""
@@ -127,20 +128,20 @@ get_confvalues() {
 	# $1: parameter
 	# $RETVAL: list of values
 
-        # Search in conffile or backconfig
+	# Search in conffile or backconfig
 	if [ -n "$SLAPD_CONF_DIR" ]; then
-        case $1 in
+	case $1 in
 	directory)
 		backconfig_get_values "olcDbDirectory"
 	;;
 	suffix)
 		backconfig_get_values "olcSuffix" "(|(objectclass=olcBdbConfig)(objectclass=olcHdbConfig)(objectclass=olcMdbConfig))"
 	;;
-        *)
+	*)
 		RETVAL=""
 	;;
 	esac
-        else
+	else
 		conffile_get_values $1
 	fi
 }
@@ -857,7 +858,7 @@ configtest() {
 	# Start message
 	message "info" "[INFO] Launching OpenLDAP configuration test..."
 
-	SLAPTEST_PARAMS="-u"	
+	SLAPTEST_PARAMS="-u"
 
 	if [ "$SLAPD_CONF_DIR" ]
 	then
@@ -1095,7 +1096,7 @@ restore() {
 
 			# Get the most recent backup for this database
 			file=`ls -1t "$BACKUP_PATH/$dir-"* 2>/dev/null | head -1`
-			
+
 			if [ -z $file ]; then
 				message "info" "[INFO] No backup file for $sufprint, skipping..."
 			else
@@ -1138,7 +1139,7 @@ restore() {
 				else
 					$SU "$SLAPADD_BIN -b \"$sufprint\" $SLAPADD_PARAMS"
 				fi
-				
+
 				# alert
 				if [ $? -ne 0 ]
 				then
@@ -1211,7 +1212,7 @@ restoreconfig() {
 			message "info" "[INFO] No configuration backup found, skipping..."
 		else
 			message "info" "[INFO] Restore configuration file $file"
-			cp -f $file $SLAPD_CONF		
+			cp -f $file $SLAPD_CONF
 		fi
 	fi
 
@@ -1281,11 +1282,54 @@ get_provider_config() {
 	done
 }
 
+# Function of comparison of CSNs
+# Return value:
+# 0  = equality
+# 1  = second value larger
+# 2 = second value smaller
+compare_CSN() {
+	local csn1="$1"
+	local csn2="$2"
+	# ContextCSN format:
+	#20230104175043.054795Z#000000#001#000000
+	#YYYYMMDDhhmmss.uuuuuu (where u is microseconds)
+	csn1us="$( date --date="${csn1:0:4}-${csn1:4:2}-${csn1:6:2} ${csn1:8:2}:${csn1:10:2}:${csn1:12:2}" +%s )"
+	csn2us="$( date --date="${csn2:0:4}-${csn2:4:2}-${csn2:6:2} ${csn2:8:2}:${csn2:10:2}:${csn2:12:2}" +%s )"
+	let csn1us="${csn1us}*1000000"
+	let csn2us="${csn2us}*1000000"
+
+	# if microseconds part present, add microseconds
+	if [ "${csn1:14:1}" = "." ]; then
+		us=${csn1:15:6}
+		let csn1us="${csn1us}+${us#0}"
+	fi
+	if [ "${csn2:14:1}" = "." ]; then
+		us=${csn2:15:6}
+		let csn2us="${csn2us}+${us#0}"
+	fi
+
+	# compute delta between CSN
+	let delta="${csn2us}-${csn1us}"
+	let deltaabs=${delta#-}
+	if (( ${deltaabs} <= ${TOLERANCE_CSN} )); then
+		return 0
+	else
+		if [ "${delta}" -gt "0" ]; then
+			return 1
+		else
+			return 2
+		fi
+	fi
+}
+
 
 check_sync() {
 	message "info" "[INFO] Checking synchronization..."
 	get_provider_config
 	RES=0 # result OK by default (if nothing to check, sync=OK)
+
+	LOCAL_URL="${SLAPD_SERVICES% }"
+	LOCAL_URL="$( printf ${LOCAL_URL} | sed -e 's/\*/localhost/g' )"
 
 	# Is there any provider configuration?
 	if [[ ${#PROVIDER[@]} -eq "0" ]]; then
@@ -1320,21 +1364,14 @@ check_sync() {
 			CONTEXTCSN=$( echo "$CONTEXTCSN" | grep contextCSN | sed -e 's/^contextCSN: //i' )
 
 			# get local contextCSN
-			if [ "$SLAPD_CONF_DIR" ]; then
-				localContextCSN=$( $SLAPCAT_BIN -b $SUFFIX -F "$SLAPD_CONF_DIR" -o ldif-wrap=no 2>/dev/null | head -n 100 | sed -e '/^$/,$d' | grep 'contextCSN' | sed -e 's/^contextCSN: //' )
-			elif [ "$SLAPD_CONF" ]; then
-				localContextCSN=$( $SLAPCAT_BIN -b $SUFFIX -f "$SLAPD_CONF" -o ldif-wrap=no 2>/dev/null | head -n 100 | sed -e '/^$/,$d' | grep 'contextCSN' | sed -e 's/^contextCSN: //' )
-			else
-				echo "No acceptable configuration found"
-				exit 1
-			fi
+			localContextCSN=$( ${LDAPSEARCH_BIN} -x -H "${LOCAL_URL}" -D "${PBINDDN}" -w "${PBINDPW}" -b "${PBASEDN}" -o nettimeout=5 -s base contextCSN -LLL 2>/dev/null | grep 'contextCSN' | sed -e 's/^contextCSN: //' )
 
 			# compare contextCSN values
 			# for each provider contextCSN
 			for CSN in $CONTEXTCSN; do
 				#  identify sid part
 				#  contextCSN = 20171128170017.708386Z#000000#001#000000
-				#                                             ^^^
+				#					      ^^^
 				SID=$( echo ${CSN} | sed -e 's/^.*\(#[0-9]\+#\)[^#]*$/\1/' )
 				echo "  Checking SID ${SID}"
 
@@ -1343,7 +1380,8 @@ check_sync() {
 					# get corresponding local slave contextCSN
 					matchingLocalContextCSN=$( echo -e "$localContextCSN" | grep "$SID" )
 					# Check if corresponding local slave contextCSN is identical to remote provider contextCSN
-					if echo "$matchingLocalContextCSN" | grep -q "$CSN" ; then
+					compare_CSN "${matchingLocalContextCSN}" "${CSN}"
+					if [[ "$?" -eq "0" ]]; then
 						echo "    INFO: remote ($CSN) and local ($matchingLocalContextCSN) contextCSN found and synchronized"
 					else
 						echo "    ERROR: remote ($CSN) and local ($matchingLocalContextCSN) contextCSN found, but not synchronized!"
