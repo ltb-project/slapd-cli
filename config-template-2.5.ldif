@@ -32,7 +32,6 @@ olcSockbufMaxIncomingAuth: 16777215
 olcThreads: 16
 olcThreadQueues: 1
 olcTLSCRLCheck: none
-olcTLSVerifyClient: demand
 olcTLSProtocolMin: 0.0
 olcToolThreads: 1
 olcWriteTimeout: 0
