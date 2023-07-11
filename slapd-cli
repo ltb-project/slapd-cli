@@ -75,6 +75,7 @@ SLAPCAT_PARAMS="-o ldif-wrap=no"
 SLAPINDEX_BIN="$SLAPD_PATH/sbin/slapindex"
 SLAPTEST_BIN="$SLAPD_PATH/sbin/slaptest"
 LDAPSEARCH_BIN="${SLAPD_PATH}/bin/ldapsearch"
+LDAPSEARCH_PARAMS=""
 
 # Backup
 BACKUP_AT_SHUTDOWN="1"
@@ -778,7 +779,7 @@ slapd_version() {
 
 	# test if SLAPD_SERVICES contains an ldapi:/// listening port
 	if echo "${SLAPD_SERVICES}" | grep -q 'ldapi:' ; then
-		VERSION=$( ${LDAPSEARCH_BIN} -Y EXTERNAL -H "${HOST}" -b "${BASE}" -s "${SCOPE}" -LLL "${ATTR}" 2>/dev/null| grep "${ATTR}" )
+		VERSION=$( ${LDAPSEARCH_BIN} -Y EXTERNAL -H "${HOST}" -b "${BASE}" -s "${SCOPE}" ${LDAPSEARCH_PARAMS} -LLL "${ATTR}" 2>/dev/null| grep "${ATTR}" )
 	fi
 
 	if [ "${VERSION}" = "" ] ; then
@@ -1353,7 +1354,7 @@ check_sync() {
 			PBASEDN=$RETVAL
 			echo "Checking contextCSN for suffix ${SUFFIX} on remote host ${PHOST}"
 			# Get remote provider contextCSN (one contextCSN per line)
-			CONTEXTCSN=$( ${LDAPSEARCH_BIN} -x -H "${PHOST}" -D "${PBINDDN}" -w "${PBINDPW}" -b "${PBASEDN}" -o nettimeout=5 -s base contextCSN -LLL 2>/dev/null )
+			CONTEXTCSN=$( ${LDAPSEARCH_BIN} -x -H "${PHOST}" -D "${PBINDDN}" -w "${PBINDPW}" -b "${PBASEDN}" -o nettimeout=5 -s base ${LDAPSEARCH_PARAMS} contextCSN -LLL 2>/dev/null )
 
 			# Checking status of previous command
 			if [ $? -ne 0 ]; then
@@ -1364,7 +1365,7 @@ check_sync() {
 			CONTEXTCSN=$( echo "$CONTEXTCSN" | grep contextCSN | sed -e 's/^contextCSN: //i' )
 
 			# get local contextCSN
-			localContextCSN=$( ${LDAPSEARCH_BIN} -x -H "${LOCAL_URL}" -D "${PBINDDN}" -w "${PBINDPW}" -b "${PBASEDN}" -o nettimeout=5 -s base contextCSN -LLL 2>/dev/null | grep 'contextCSN' | sed -e 's/^contextCSN: //' )
+			localContextCSN=$( ${LDAPSEARCH_BIN} -x -H "${LOCAL_URL}" -D "${PBINDDN}" -w "${PBINDPW}" -b "${PBASEDN}" -o nettimeout=5 -s base ${LDAPSEARCH_PARAMS} contextCSN -LLL 2>/dev/null | grep 'contextCSN' | sed -e 's/^contextCSN: //' )
 
 			# compare contextCSN values
 			# for each provider contextCSN
