@@ -3,7 +3,7 @@
 #====================================================================
 # CLI script for OpenLDAP
 # (http://www.openldap.org).
-# 
+#
 # chkconfig: 2345 27 73
 # description: OpenLDAP
 #
@@ -11,8 +11,8 @@
 # Copyright (C) 2008 Jonathan CLARKE
 # Copyright (C) 2007 Olivier LI-KIANG-CHEONG
 # Copyright (C) 2007 Thomas CHEMINEAU
-# Copyright (C) 2005 Sebastien BAHLOUL 
-# Copyright (C) 2005 Raphael OUAZANA 
+# Copyright (C) 2005 Sebastien BAHLOUL
+# Copyright (C) 2005 Raphael OUAZANA
 # Copyright (C) 2005 Clement OUDOT
 # Copyright (C) 2010-2021 LTB-project.org
 #
@@ -48,8 +48,12 @@ CLI_CONF_FILE=/usr/local/openldap/etc/openldap/${PROG_NAME}.conf
 # IP and port to listen (use wildcard * in IP to listen on all interfaces)
 IP="*"
 SSLIP="*"
+PIP="*"
+PSSLIP="*"
 PORT="389"
 SSLPORT="636"
+PPORT="8389"
+PSSLPORT="8636"
 LDAPI_SOCKETDIR=""
 LDAPI_SOCKETURL=""
 
@@ -369,10 +373,10 @@ start_slapd() {
 	slapd_status
 
 	if [ $? -eq 0 ]
-	then 
+	then
 		message "info" "[OK] OpenLDAP is already running"
 		exit 0
-	fi   
+	fi
 
 	# Start message
 	message "info" "[INFO] Launching OpenLDAP..."
@@ -412,12 +416,13 @@ start_slapd() {
 
 	if [ "$SLAPD_SYSLOG_LOCAL_USER" ]
 	then
-		SLAPD_PARAMS="$SLAPD_PARAMS -l $SLAPD_SYSLOG_LOCAL_USER" 
+		SLAPD_PARAMS="$SLAPD_PARAMS -l $SLAPD_SYSLOG_LOCAL_USER"
 	fi
 
 	# It's time to start slapd
 
 	if [ -n "$1" ]; then
+
 		$SLAPD_BIN -h "$SLAPD_SERVICES" $SLAPD_PARAMS -d $1
 	else
 		if [ $_use_systemctl -eq 1 ] ; then
@@ -503,10 +508,10 @@ start_lload() {
 	lload_status
 
 	if [ $? -eq 0 ]
-	then 
+	then
 		message "info" "[OK] lload is already running"
 		exit 0
-	fi   
+	fi
 
 	# Start message
 	message "info" "[INFO] Launching OpenLDAP..."
@@ -546,7 +551,7 @@ start_lload() {
 
 	if [ "$SLAPD_SYSLOG_LOCAL_USER" ]
 	then
-		LLOAD_PARAMS="$LLOAD_PARAMS -l $SLAPD_SYSLOG_LOCAL_USER" 
+		LLOAD_PARAMS="$LLOAD_PARAMS -l $SLAPD_SYSLOG_LOCAL_USER"
 	fi
 
 	# It's time to start lload
@@ -659,7 +664,7 @@ lload_status() {
 display_lload_status() {
 
 	# Print script version
-	message "info" "[INFO] LDAP Tool Box slapd-cli script version $VERSION" 
+	message "info" "[INFO] LDAP Tool Box slapd-cli script version $VERSION"
 
 	# Get status
 	lload_status
@@ -804,7 +809,7 @@ slapd_version() {
 display_status() {
 
 	# Print script version
-	message "info" "[INFO] LDAP Tool Box slapd-cli script version $VERSION" 
+	message "info" "[INFO] LDAP Tool Box slapd-cli script version $VERSION"
 
 	# Get status
 	slapd_status
@@ -820,6 +825,7 @@ display_status() {
 		if [ "${VER}" != "" ] ; then
 			message "info" "[INFO] Detected OpenLDAP version: $( slapd_version )"
 		fi
+
 		message "info" "[INFO] Listening to services $SLAPD_SERVICES"
 
 		CPU=`ps -p $PID -o %cpu=`
@@ -1347,6 +1353,7 @@ check_sync() {
 
 	LOCAL_URL="${SLAPD_SERVICES% }"
 	LOCAL_URL="$( printf ${LOCAL_URL} | sed -e 's/\*/localhost/g' )"
+	LOCAL_URL_SSL=$( printf "%s" "${SLAPD_SERVICES}" | sed -e 's/\*/localhost/g' -e 's/^.*\(^\|[ \t]\)\(ldaps:[^ \t\r\n]\+\).*$/\2/' )
 
 	# Is there any provider configuration?
 	if [[ ${#PROVIDER[@]} -eq "0" ]]; then
@@ -1368,11 +1375,28 @@ check_sync() {
 			PBINDPW=$RETVAL
 			syncrepl_get_value "${PROV}" "searchbase"
 			PBASEDN=$RETVAL
+			syncrepl_get_value "${PROV}" "tls_cacertdir"
+			PCACERTDIR=$RETVAL
+			syncrepl_get_value "${PROV}" "tls_cacert"
+			PCACERT=$RETVAL
+			syncrepl_get_value "${PROV}" "tls_cert"
+			PCERT=$RETVAL
+			syncrepl_get_value "${PROV}" "tls_key"
+			PKEY=$RETVAL
 			echo "Checking contextCSN for suffix ${SUFFIX} on remote host ${PHOST}"
 			# Get remote provider contextCSN (one contextCSN per line)
+			# Certificate authentication
+			if [[ ! -z "$PCERT" ]] && [[ ! -z "$PKEY" ]] ; then
+				if [[ ! -z "$PCACERTDIR" ]]; then
+					CERTVARS='LDAPTLS_CACERTDIR="${PCACERTDIR}" LDAPTLS_CERT="${PCERT}" LDAPTLS_KEY="${PKEY}" LDAPTLS_REQCERT="try"'
+				else
+					CERTVARS='LDAPTLS_CACERT="${PCACERT}" LDAPTLS_CERT="${PCERT}" LDAPTLS_KEY="${PKEY}" LDAPTLS_REQCERT="try"'
+				fi
+				CONTEXTCSN=$(eval "${CERTVARS}" ${LDAPSEARCH_BIN} -Y EXTERNAL -H "${PHOST}" -b "${PBASEDN}" -o nettimeout=5 -s base ${LDAPSEARCH_PARAMS} contextCSN -LLL 2>/dev/null )
 			# If bindDN is empty, try anonymous bind
-			if [ -z "$PBINDDN" ]; then
+			elif [ -z "$PBINDDN" ]; then
 				CONTEXTCSN=$( ${LDAPSEARCH_BIN} -x -H "${PHOST}" -b "${PBASEDN}" -o nettimeout=5 -s base ${LDAPSEARCH_PARAMS} contextCSN -LLL 2>/dev/null )
+			# Password authentication (default)
 			else
 				CONTEXTCSN=$( ${LDAPSEARCH_BIN} -x -H "${PHOST}" -D "${PBINDDN}" -w "${PBINDPW}" -b "${PBASEDN}" -o nettimeout=5 -s base ${LDAPSEARCH_PARAMS} contextCSN -LLL 2>/dev/null )
 			fi
@@ -1386,9 +1410,19 @@ check_sync() {
 			CONTEXTCSN=$( echo "$CONTEXTCSN" | grep contextCSN | sed -e 's/^contextCSN: //i' )
 
 			# get local contextCSN
+			# Certificate authentication
+			if [[ ! -z "$PCERT" ]] && [[ ! -z "$PKEY" ]] ; then
+				if [[ ! -z "$PCACERTDIR" ]]; then
+					CERTVARS='LDAPTLS_CACERTDIR="${PCACERTDIR}" LDAPTLS_CERT="${PCERT}" LDAPTLS_KEY="${PKEY}" LDAPTLS_REQCERT="try"'
+				else
+					CERTVARS='LDAPTLS_CACERT="${PCACERT}" LDAPTLS_CERT="${PCERT}" LDAPTLS_KEY="${PKEY}" LDAPTLS_REQCERT="try"'
+				fi
+				localContextCSN=$(eval "${CERTVARS}" ${LDAPSEARCH_BIN} -Y EXTERNAL -H "${LOCAL_URL_SSL}" -b "${PBASEDN}" -o nettimeout=5 -s base ${LDAPSEARCH_PARAMS} contextCSN -LLL 2>/dev/null | grep 'contextCSN' | sed -e 's/^contextCSN: //' )
 			# If bindDN is empty, try anonymous bind
-			if [ -z "$PBINDDN" ]; then
+			elif [ -z "$PBINDDN" ]; then
 				localContextCSN=$( ${LDAPSEARCH_BIN} -x -H "${LOCAL_URL}" -b "${PBASEDN}" -o nettimeout=5 -s base ${LDAPSEARCH_PARAMS} contextCSN -LLL 2>/dev/null | grep 'contextCSN' | sed -e 's/^contextCSN: //' )
+
+			# Password authentication (default)
 			else
 				localContextCSN=$( ${LDAPSEARCH_BIN} -x -H "${LOCAL_URL}" -D "${PBINDDN}" -w "${PBINDPW}" -b "${PBASEDN}" -o nettimeout=5 -s base ${LDAPSEARCH_PARAMS} contextCSN -LLL 2>/dev/null | grep 'contextCSN' | sed -e 's/^contextCSN: //' )
 			fi
