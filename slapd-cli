@@ -1246,6 +1246,12 @@ get_provider_config() {
 			if printf "$LINE" | grep -q -P '^olcSuffix:[ \t]+' ; then
 				SUF="$( printf "$LINE" | sed -e 's/^olcSuffix:[ \t]\+//' -e 's/"//g' )"
 			fi
+			# test if the olcSyncrepl attribute is base64 encoded - decode it if yes before processing the line
+			if printf "$LINE" | grep -q -P '^olcSyncrepl::' ; then
+					LINEDECODED="olcSyncrepl: "
+					LINEDECODED+=$(echo "$LINE" | cut -d ' ' -f 2 | base64 -d -i)
+					LINE=$LINEDECODED
+			fi
 			if printf "$LINE" | grep -q -P '^olcSyncrepl:[ \t]+' ; then
 				# add detected provider to the list of detected providers for this suffix (\n separated)
 				PROVIDER[${SUF}]="${PROVIDER[$SUF]}\n$( printf "${LINE}" | sed -e 's/olcSyncrepl:[ \t]\+{*[0-9]*}*//' )"
