@@ -1344,8 +1344,13 @@ check_sync() {
 
 	LOCAL_URL="${SLAPD_SERVICES% }"
 	LOCAL_URL="$( printf ${LOCAL_URL} | sed -e 's/\*/localhost/g' )"
-	LOCAL_URL_SSL=$( echo $SLAPD_SERVICES | cut -d ' ' -f 2 )
-	LOCAL_URL_SSL="$( printf ${LOCAL_URL_SSL} | sed -e 's/\*/localhost/g' )"
+	if [[ ! $LOCAL_URL =~ "^ldaps.*" ]]
+	then
+		LOCAL_URL_SSL=$( echo $SLAPD_SERVICES | cut -d ' ' -f 2 )
+		LOCAL_URL_SSL="$( printf ${LOCAL_URL_SSL} | sed -e 's/\*/localhost/g' )"
+	else
+		LOCAL_URL_SSL=LOCAL_URL
+	fi
 
 	# Is there any provider configuration?
 	if [[ ${#PROVIDER[@]} -eq "0" ]]; then
