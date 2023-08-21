@@ -48,8 +48,12 @@ CLI_CONF_FILE=/usr/local/openldap/etc/openldap/${PROG_NAME}.conf
 # IP and port to listen (use wildcard * in IP to listen on all interfaces)
 IP="*"
 SSLIP="*"
+PIP="*"
+PSSLIP="*"
 PORT="389"
 SSLPORT="636"
+PPORT="8389"
+PSSLPORT="8636"
 LDAPI_SOCKETDIR=""
 LDAPI_SOCKETURL=""
 
@@ -59,6 +63,7 @@ SLAPD_PID_FILE="$SLAPD_PATH/var/run/slapd.pid"
 SLAPD_CONF="$SLAPD_PATH/etc/openldap/slapd.conf"
 SLAPD_CONF_DIR=""
 SLAPD_SERVICES="ldap://$IP:$PORT ldaps://$SSLIP:$SSLPORT"
+SLAPD_PROXY_SERVICES="pldap://$PIP:$PPORT pldaps://$PSSLIP:$PSSLPORT"
 SLAPD_PARAMS=""
 SLAPD_BIN="$SLAPD_PATH/libexec/slapd"
 SLAPD_USER=""
@@ -415,12 +420,12 @@ start_slapd() {
 	# It's time to start slapd
 
 	if [ -n "$1" ]; then
-		$SLAPD_BIN -h "$SLAPD_SERVICES" $SLAPD_PARAMS -d $1
+		$SLAPD_BIN -h "$SLAPD_SERVICES $SLAPD_PROXY_SERVICES" $SLAPD_PARAMS -d $1
 	else
 		if [ $_use_systemctl -eq 1 ] ; then
 			systemctl start "$SYSTEMD_SERVICE_NAME"
 		else
-			$SLAPD_BIN -h "$SLAPD_SERVICES" $SLAPD_PARAMS
+			$SLAPD_BIN -h "$SLAPD_SERVICES $SLAPD_PROXY_SERVICES" $SLAPD_PARAMS
 		fi
 		sleep 1
 
@@ -702,13 +707,13 @@ forcestop() {
 	# Presence of PID file
 	if [ ! -r $SLAPD_PID_FILE ]
 	then
-		# Escape special characters into $SLAPD_SERVICES
-		slapd_services="`echo "$SLAPD_SERVICES" | sed 's/\*/\\\*/g'`"
+		# Escape special characters into $SLAPD_SERVICES $SLAPD_PROXY_SERVICES
+		slapd_services="`echo "$SLAPD_SERVICES $SLAPD_PROXY_SERVICES" | sed 's/\*/\\\*/g'`"
 
 		# Check if any slapd process are running
 		if [ `${PS_COMMAND_CMD} | grep $SLAPD_BIN | grep "$slapd_services" | grep -v grep | wc -l` -eq 0 ]
 		then
-			message "info" "[INFO] Found no OpenLDAP process running with $SLAPD_SERVICES"
+			message "info" "[INFO] Found no OpenLDAP process running with $SLAPD_SERVICES $SLAPD_PROXY_SERVICES"
 		else
 			# Try a killall
 			/usr/bin/killall -KILL $SLAPD_BIN
@@ -753,8 +758,8 @@ slapd_status() {
 	# Return 0 if slapd is running, 1 if slapd is stopped, 2 if we can't say
 	if [ ! -r $SLAPD_PID_FILE ]
 	then
-		# Escape special characters into $SLAPD_SERVICES
-		slapd_services="`echo "$SLAPD_SERVICES" | sed 's/\*/\\\*/g'`"
+		# Escape special characters into $SLAPD_SERVICES $SLAPD_PROXY_SERVICES
+		slapd_services="`echo "$SLAPD_SERVICES $SLAPD_PROXY_SERVICES" | sed 's/\*/\\\*/g'`"
 
 		# Check if any slapd process are running
 		if [ `${PS_COMMAND_CMD} | grep $SLAPD_BIN | grep "$slapd_services" | grep -v grep | wc -l` -eq 0 ]
@@ -817,7 +822,7 @@ display_status() {
 		if [ "${VER}" != "" ] ; then
 			message "info" "[INFO] Detected OpenLDAP version: $( slapd_version )"
 		fi
-		message "info" "[INFO] Listening to services $SLAPD_SERVICES"
+		message "info" "[INFO] Listening to services $SLAPD_SERVICES $SLAPD_PROXY_SERVICES"
 
 		CPU=`ps -p $PID -o %cpu=`
 		MEM=`ps -p $PID -o %mem=`
