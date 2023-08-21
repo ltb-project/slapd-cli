@@ -217,9 +217,9 @@ syncrepl_get_value() {
 	then
 		RETVAL=""
 	elif [ $noquotes -gt 0 ]
-	then 
+	then
 		RETVAL=$( echo "$syncrepl" | sed -e 's/.*'$parameter'[ \t]*=[ \t]*\([^ \t]\+\).*$/\1/' | sed -e 's/["]//g' | sed -e "s/[']//g")
-	else 
+	else
 		RETVAL=$( echo "$syncrepl" | sed -e 's/.*'$parameter'[ \t]*=[ \t]*"\([^"\t]\+\)".*$/\1/' | sed -e 's/["]//g' | sed -e "s/[']//g");
 	fi
 }
@@ -1369,10 +1369,9 @@ check_sync() {
 			# Get remote provider contextCSN (one contextCSN per line)
 			# If bindDN is empty, try anonymous bind
 			if [ -z "$PBINDDN" ]; then
-				CONTEXTCSN=$(LDAPTLS_REQCERT=never ${LDAPSEARCH_BIN} -x -H "${PHOST}" -b "${PBASEDN}" -o nettimeout=5 -s base ${LDAPSEARCH_PARAMS} contextCSN -LLL 2>/dev/null )
+				CONTEXTCSN=$( ${LDAPSEARCH_BIN} -x -H "${PHOST}" -b "${PBASEDN}" -o nettimeout=5 -s base ${LDAPSEARCH_PARAMS} contextCSN -LLL 2>/dev/null )
 			else
-				CONTEXTCSN=$(LDAPTLS_REQCERT=never ${LDAPSEARCH_BIN} -x -H "${PHOST}" -D "${PBINDDN}" -w "${PBINDPW}" -b "${PBASEDN}" -o nettimeout=5 -s base ${LDAPSEARCH_PARAMS} contextCSN -LLL 2>/dev/null )
-	
+				CONTEXTCSN=$( ${LDAPSEARCH_BIN} -x -H "${PHOST}" -D "${PBINDDN}" -w "${PBINDPW}" -b "${PBASEDN}" -o nettimeout=5 -s base ${LDAPSEARCH_PARAMS} contextCSN -LLL 2>/dev/null )
 			fi
 
 			# Checking status of previous command
@@ -1386,9 +1385,9 @@ check_sync() {
 			# get local contextCSN
 			# If bindDN is empty, try anonymous bind
 			if [ -z "$PBINDDN" ]; then
-				localContextCSN=$(LDAPTLS_REQCERT=never ${LDAPSEARCH_BIN} -x -H "${LOCAL_URL}" -b "${PBASEDN}" -o nettimeout=5 -s base ${LDAPSEARCH_PARAMS} contextCSN -LLL 2>/dev/null | grep 'contextCSN' | sed -e 's/^contextCSN: //' )
+				localContextCSN=$( ${LDAPSEARCH_BIN} -x -H "${LOCAL_URL}" -b "${PBASEDN}" -o nettimeout=5 -s base ${LDAPSEARCH_PARAMS} contextCSN -LLL 2>/dev/null | grep 'contextCSN' | sed -e 's/^contextCSN: //' )
 			else
-				localContextCSN=$(LDAPTLS_REQCERT=never ${LDAPSEARCH_BIN} -x -H "${LOCAL_URL}" -D "${PBINDDN}" -w "${PBINDPW}" -b "${PBASEDN}" -o nettimeout=5 -s base ${LDAPSEARCH_PARAMS} contextCSN -LLL 2>/dev/null | grep 'contextCSN' | sed -e 's/^contextCSN: //' )
+				localContextCSN=$( ${LDAPSEARCH_BIN} -x -H "${LOCAL_URL}" -D "${PBINDDN}" -w "${PBINDPW}" -b "${PBASEDN}" -o nettimeout=5 -s base ${LDAPSEARCH_PARAMS} contextCSN -LLL 2>/dev/null | grep 'contextCSN' | sed -e 's/^contextCSN: //' )
 			fi
 
 			# compare contextCSN values
