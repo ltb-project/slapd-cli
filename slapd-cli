@@ -1393,17 +1393,16 @@ check_sync() {
 			# Get remote provider contextCSN (one contextCSN per line)
 			# If certificate based authentication is used, use it
 			if [ "$PBINDMTD" == "sasl" ] && [ "$PSASLMECH" == "external" ]; then
-				if [[ ! -z "$PCACERTDIR" ]]; then
-					CONTEXTCSN=$(LDAPTLS_CACERTDIR=${PCACERTDIR} LDAPTLS_CERT=${PCERT} LDAPTLS_KEY=${PKEY} ${LDAPSEARCH_BIN} -Y EXTERNAL -H "${PHOST}" -b "${PBASEDN}" -o nettimeout=5 -s base ${LDAPSEARCH_PARAMS} contextCSN -LLL 2>/dev/null )
-				else
-					CONTEXTCSN=$(LDAPTLS_CACERT=${PCACERT} LDAPTLS_CERT=${PCERT} LDAPTLS_KEY=${PKEY} ${LDAPSEARCH_BIN} -Y EXTERNAL -H "${PHOST}" -b "${PBASEDN}" -o nettimeout=5 -s base ${LDAPSEARCH_PARAMS} contextCSN -LLL 2>/dev/null )
-				fi
+					if [[ ! -z "$PCACERTDIR" ]]; then
+						CONTEXTCSN=$(LDAPTLS_CACERTDIR=${PCACERTDIR} LDAPTLS_CERT=${PCERT} LDAPTLS_KEY=${PKEY} ${LDAPSEARCH_BIN} -Y EXTERNAL -H "${PHOST}" -b "${PBASEDN}" -o nettimeout=5 -s base ${LDAPSEARCH_PARAMS} contextCSN -LLL 2>/dev/null )
+					else
+						CONTEXTCSN=$(LDAPTLS_CACERT=${PCACERT} LDAPTLS_CERT=${PCERT} LDAPTLS_KEY=${PKEY} ${LDAPSEARCH_BIN} -Y EXTERNAL -H "${PHOST}" -b "${PBASEDN}" -o nettimeout=5 -s base ${LDAPSEARCH_PARAMS} contextCSN -LLL 2>/dev/null )
+					fi
 			# If bindDN is empty, try anonymous bind
 			elif [ -z "$PBINDDN" ]; then
-				CONTEXTCSN=$(LDAPTLS_REQCERT=never ${LDAPSEARCH_BIN} -x -H "${PHOST}" -b "${PBASEDN}" -o nettimeout=5 -s base ${LDAPSEARCH_PARAMS} contextCSN -LLL 2>/dev/null )
+				CONTEXTCSN=$( ${LDAPSEARCH_BIN} -x -H "${PHOST}" -b "${PBASEDN}" -o nettimeout=5 -s base ${LDAPSEARCH_PARAMS} contextCSN -LLL 2>/dev/null )
 			else
-				CONTEXTCSN=$(LDAPTLS_REQCERT=never ${LDAPSEARCH_BIN} -x -H "${PHOST}" -D "${PBINDDN}" -w "${PBINDPW}" -b "${PBASEDN}" -o nettimeout=5 -s base ${LDAPSEARCH_PARAMS} contextCSN -LLL 2>/dev/null )
-	
+				CONTEXTCSN=$( ${LDAPSEARCH_BIN} -x -H "${PHOST}" -D "${PBINDDN}" -w "${PBINDPW}" -b "${PBASEDN}" -o nettimeout=5 -s base ${LDAPSEARCH_PARAMS} contextCSN -LLL 2>/dev/null )
 			fi
 
 			# Checking status of previous command
@@ -1424,9 +1423,9 @@ check_sync() {
 				fi
 			# If bindDN is empty, try anonymous bind
 			elif [ -z "$PBINDDN" ]; then
-				localContextCSN=$(LDAPTLS_REQCERT=never ${LDAPSEARCH_BIN} -x -H "${LOCAL_URL}" -b "${PBASEDN}" -o nettimeout=5 -s base ${LDAPSEARCH_PARAMS} contextCSN -LLL 2>/dev/null | grep 'contextCSN' | sed -e 's/^contextCSN: //' )
+				localContextCSN=$( ${LDAPSEARCH_BIN} -x -H "${LOCAL_URL}" -b "${PBASEDN}" -o nettimeout=5 -s base ${LDAPSEARCH_PARAMS} contextCSN -LLL 2>/dev/null | grep 'contextCSN' | sed -e 's/^contextCSN: //' )
 			else
-				localContextCSN=$(LDAPTLS_REQCERT=never ${LDAPSEARCH_BIN} -x -H "${LOCAL_URL}" -D "${PBINDDN}" -w "${PBINDPW}" -b "${PBASEDN}" -o nettimeout=5 -s base ${LDAPSEARCH_PARAMS} contextCSN -LLL 2>/dev/null | grep 'contextCSN' | sed -e 's/^contextCSN: //' )
+				localContextCSN=$( ${LDAPSEARCH_BIN} -x -H "${LOCAL_URL}" -D "${PBINDDN}" -w "${PBINDPW}" -b "${PBASEDN}" -o nettimeout=5 -s base ${LDAPSEARCH_PARAMS} contextCSN -LLL 2>/dev/null | grep 'contextCSN' | sed -e 's/^contextCSN: //' )
 			fi
 
 			# compare contextCSN values
