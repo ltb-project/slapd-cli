@@ -84,6 +84,8 @@ BACKUP_SUFFIX="`date +%Y%m%d%H%M%S`.ldif"
 BACKUP_COMPRESS_EXT="" # gz, bz2, ...
 BACKUP_COMPRESS_BIN="" # /bin/gzip, /bin/bzip2, ...
 BACKUP_UNCOMPRESS_BIN="" # /bin/gunzip, /bin/bunzip2, ...
+BACKUP_CONFIG_DELETE_AFTER_DAYS=""
+BACKUP_DATA_DELETE_AFTER_DAYS=""
 
 # Other
 TIMEOUT="60"      # Max time to stop process
@@ -352,6 +354,7 @@ display_usage() {
 	printf "%s\n" "  - ${bold}lloadstart${normal}: start the load-balancer"
 	printf "%s\n" "  - ${bold}lloadstop${normal}: stop the load-balancer"
 	printf "%s\n" "  - ${bold}lloadstatus${normal}: get the status of currently running load-balancer"
+	printf "%s\n" "  - ${bold}removeoldbackups${normal}: remove old backup files"
 	printf "\n"
 
 }
@@ -2027,6 +2030,22 @@ userPassword: ${DATA_USER_PW_HASH}" >> ${DATA_FILE_PATH}
 
 }
 
+removeoldconfigbackups() {
+        if [ "x$BACKUP_CONFIG_DELETE_AFTER_DAYS" != "x" ]
+        then
+                message "info" "[INFO] Removing config backup files older than $BACKUP_CONFIG_DELETE_AFTER_DAYS days"
+                find $BACKUP_PATH -type f -name 'config-*' -mtime +$BACKUP_CONFIG_DELETE_AFTER_DAYS -delete -print
+        fi
+}
+
+removeolddatabackups() {
+        if [ "x$BACKUP_DATA_DELETE_AFTER_DAYS" != "x" ]
+        then
+                message "info" "[INFO] Removing data backup files older than $BACKUP_DATA_DELETE_AFTER_DAYS days"
+                find $BACKUP_PATH -type f ! -name 'config-*' -mtime +$BACKUP_DATA_DELETE_AFTER_DAYS -delete -print
+        fi
+}
+
 #====================================================================
 # Action switch
 #====================================================================
@@ -2066,6 +2085,7 @@ case $1 in
 	;;
 	backup)
 	backup
+	removeolddatabackups
 	;;
 	restore)
 	stop_slapd
@@ -2074,6 +2094,7 @@ case $1 in
 	;;
 	backupconfig)
 	backupconfig
+	removeoldconfigbackups
 	;;
 	restoreconfig)
 	stop_slapd
@@ -2113,6 +2134,10 @@ case $1 in
 	;;
 	lloadstatus)
 	display_lload_status
+	;;
+	removeoldbackups)
+	removeoldconfigbackups
+	removeolddatabackups
 	;;
 	*)
 	display_usage
