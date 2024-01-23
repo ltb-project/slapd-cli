@@ -83,6 +83,9 @@ SLAPTEST_BIN="$SLAPD_PATH/sbin/slaptest"
 LDAPSEARCH_BIN="${SLAPD_PATH}/bin/ldapsearch"
 LDAPSEARCH_PARAMS=""
 
+# Replication bind method (CERT, ANON or PWD as default)
+BIND_METHOD="PWD"
+
 # Backup
 BACKUP_AT_SHUTDOWN="1"
 BACKUP_PATH="/tmp/openldap"
@@ -1406,10 +1409,6 @@ check_sync() {
 			PBINDPW=$RETVAL
 			syncrepl_get_value "${PROV}" "searchbase"
 			PBASEDN=$RETVAL
-			syncrepl_get_value "${PROV}" "bindmethod"
-			PBINDMTD=$RETVAL
-			syncrepl_get_value "${PROV}" "saslmech"
-			PSASLMECH=$RETVAL
 			syncrepl_get_value "${PROV}" "tls_cacertdir"
 			PCACERTDIR=$RETVAL
 			syncrepl_get_value "${PROV}" "tls_cacert"
@@ -1420,16 +1419,18 @@ check_sync() {
 			PKEY=$RETVAL
 			echo "Checking contextCSN for suffix ${SUFFIX} on remote host ${PHOST}"
 			# Get remote provider contextCSN (one contextCSN per line)
-			# If certificate based authentication is used, use it
-			if [ "$PBINDMTD" == "sasl" ] && [ "$PSASLMECH" == "external" ]; then
+			# Use the configured $BIND_METHOD to connect to the provider
+			# Certificate authentication
+			if [ "$BIND_METHOD" == "CERT" ]; then
 					if [[ ! -z "$PCACERTDIR" ]]; then
 						CONTEXTCSN=$(LDAPTLS_CACERTDIR=${PCACERTDIR} LDAPTLS_CERT=${PCERT} LDAPTLS_KEY=${PKEY} ${LDAPSEARCH_BIN} -Y EXTERNAL -H "${PHOST}" -b "${PBASEDN}" -o nettimeout=5 -s base ${LDAPSEARCH_PARAMS} contextCSN -LLL 2>/dev/null )
 					else
 						CONTEXTCSN=$(LDAPTLS_CACERT=${PCACERT} LDAPTLS_CERT=${PCERT} LDAPTLS_KEY=${PKEY} ${LDAPSEARCH_BIN} -Y EXTERNAL -H "${PHOST}" -b "${PBASEDN}" -o nettimeout=5 -s base ${LDAPSEARCH_PARAMS} contextCSN -LLL 2>/dev/null )
 					fi
-			# If bindDN is empty, try anonymous bind
-			elif [ -z "$PBINDDN" ]; then
+			# Anonymous bind
+			elif [ "$BIND_METHOD" == "ANON" ]; then
 				CONTEXTCSN=$( ${LDAPSEARCH_BIN} -x -H "${PHOST}" -b "${PBASEDN}" -o nettimeout=5 -s base ${LDAPSEARCH_PARAMS} contextCSN -LLL 2>/dev/null )
+			# Password authentication (default)
 			else
 				CONTEXTCSN=$( ${LDAPSEARCH_BIN} -x -H "${PHOST}" -D "${PBINDDN}" -w "${PBINDPW}" -b "${PBASEDN}" -o nettimeout=5 -s base ${LDAPSEARCH_PARAMS} contextCSN -LLL 2>/dev/null )
 			fi
@@ -1443,16 +1444,19 @@ check_sync() {
 			CONTEXTCSN=$( echo "$CONTEXTCSN" | grep contextCSN | sed -e 's/^contextCSN: //i' )
 
 			# get local contextCSN
-			# If certificate based authentication is used, use it
-			if [ "$PBINDMTD" == "sasl" ] && [ "$PSASLMECH" == "external" ]; then
+			# Use the configured $BIND_METHOD to connect to the provider
+			# Certificate authentication
+			if [ "$BIND_METHOD" == "CERT" ]; then
 				if [[ ! -z "$PCACERTDIR" ]]; then
 					localContextCSN=$(LDAPTLS_CACERTDIR=${PCACERTDIR} LDAPTLS_CERT=${PCERT} LDAPTLS_KEY=${PKEY} ${LDAPSEARCH_BIN} -Y EXTERNAL -H "${LOCAL_URL_SSL}" -b "${PBASEDN}" -o nettimeout=5 -s base ${LDAPSEARCH_PARAMS} contextCSN -LLL 2>/dev/null | grep 'contextCSN' | sed -e 's/^contextCSN: //' )
 				else
 					localContextCSN=$(LDAPTLS_CACERT=${PCACERT} LDAPTLS_CERT=${PCERT} LDAPTLS_KEY=${PKEY} ${LDAPSEARCH_BIN} -Y EXTERNAL -H "${LOCAL_URL_SSL}" -b "${PBASEDN}" -o nettimeout=5 -s base ${LDAPSEARCH_PARAMS} contextCSN -LLL 2>/dev/null | grep 'contextCSN' | sed -e 's/^contextCSN: //' )
 				fi
-			# If bindDN is empty, try anonymous bind
-			elif [ -z "$PBINDDN" ]; then
+			# Anonymous bind
+			elif [ "$BIND_METHOD" == "ANON" ]; then
 				localContextCSN=$( ${LDAPSEARCH_BIN} -x -H "${LOCAL_URL}" -b "${PBASEDN}" -o nettimeout=5 -s base ${LDAPSEARCH_PARAMS} contextCSN -LLL 2>/dev/null | grep 'contextCSN' | sed -e 's/^contextCSN: //' )
+			
+			# Password authentication (default)
 			else
 				localContextCSN=$( ${LDAPSEARCH_BIN} -x -H "${LOCAL_URL}" -D "${PBINDDN}" -w "${PBINDPW}" -b "${PBASEDN}" -o nettimeout=5 -s base ${LDAPSEARCH_PARAMS} contextCSN -LLL 2>/dev/null | grep 'contextCSN' | sed -e 's/^contextCSN: //' )
 			fi
