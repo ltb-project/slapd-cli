@@ -178,7 +178,7 @@ backconfig_get_values() {
 	# $2: LDAP filter (optional)
 	# $RETVAL: list of returned values
 
-	if [ -z "$SLAPD_CONF_DIR" -o ! -d "$SLAPD_CONF_DIR" ]
+	if [ -z "$SLAPD_CONF_DIR" ] || [ ! -d "$SLAPD_CONF_DIR" ]
 	then
 		message "alert" "[ALERT] Could not parse configuration directory"
 		RETVAL=""
@@ -275,7 +275,7 @@ fi
 #====================================================================
 # Initiate 'su' command
 #====================================================================
-if [ "$SLAPD_USER" -a "$MYUID" -eq 0 ]
+if [ "$SLAPD_USER" ] && [ "$MYUID" -eq 0 ]
 then
 	SU="su -s /bin/bash - $SLAPD_USER -c "
 fi
@@ -303,28 +303,28 @@ do
 done
 
 # Rights to read configuration
-if [ "$SLAPD_CONF" -a ! -r "$SLAPD_CONF" ]
+if [ "$SLAPD_CONF" ] && [ ! -r "$SLAPD_CONF" ]
 then
 	message "alert" "[ALERT] Can't read $SLAPD_CONF"
 	exit 1
 fi
 
 # Is there a configuration directory ?
-if [ "$SLAPD_CONF_DIR" -a ! -w "$SLAPD_CONF_DIR" ]
+if [ "$SLAPD_CONF_DIR" ] && [ ! -w "$SLAPD_CONF_DIR" ]
 then
 	message "alert" "[ALERT] Can't write to configuration directory $SLAPD_CONF_DIR"
 	exit 1
 fi
 
 # Are you root (for port < 1024)?
-if [ $PORT -lt 1024 -a "$MYUID" -ne 0 ]
+if [ $PORT -lt 1024 ] && [ "$MYUID" -ne 0 ]
 then
 	message "alert" "[ALERT] Only root can launch OpenLDAP on port $PORT"
 	exit 1
 fi
 
 # Create LDAPI socket
-if [ "$LDAPI_SOCKETDIR" -a ! -r "$LDAPI_SOCKETDIR" ]
+if [ "$LDAPI_SOCKETDIR" ] && [ ! -r "$LDAPI_SOCKETDIR" ]
 then
 	message "info" "[INFO] Create LDAPI socket dir $LDAPI_SOCKETDIR"
 	mkdir -p "$LDAPI_SOCKETDIR"
@@ -411,12 +411,12 @@ start_slapd() {
 		SLAPD_PARAMS="$SLAPD_PARAMS -f $SLAPD_CONF"
 	fi
 
-	if [  "$SLAPD_USER" -a "$MYUID" -eq 0 ]
+	if [  "$SLAPD_USER" ] && [ "$MYUID" -eq 0 ]
 	then
 		SLAPD_PARAMS="$SLAPD_PARAMS -u $SLAPD_USER"
 	fi
 
-	if [ "$SLAPD_GROUP" -a "$MYGID" -eq 0 ]
+	if [ "$SLAPD_GROUP" ] && [ "$MYGID" -eq 0 ]
 	then
 		SLAPD_PARAMS="$SLAPD_PARAMS -g $SLAPD_GROUP"
 	fi
@@ -562,12 +562,12 @@ start_lload() {
 		LLOAD_PARAMS="$LLOAD_PARAMS -f $LLOAD_CONF"
 	fi
 
-	if [  "$SLAPD_USER" -a "$MYUID" -eq 0 ]
+	if [ "$SLAPD_USER" ] && [ "$MYUID" -eq 0 ]
 	then
 		LLOAD_PARAMS="$LLOAD_PARAMS -u $SLAPD_USER"
 	fi
 
-	if [ "$SLAPD_GROUP" -a "$MYGID" -eq 0 ]
+	if [ "$SLAPD_GROUP" ] && [ "$MYGID" -eq 0 ]
 	then
 		LLOAD_PARAMS="$LLOAD_PARAMS -g $SLAPD_GROUP"
 	fi
@@ -875,7 +875,7 @@ display_status() {
 	get_confvalues "suffix"
 	dbsufs=$RETVAL
 
-	if [ -n "$dbdirs" -o -n "$dbsufs" ]
+	if [ -n "$dbdirs" ] || [ -n "$dbsufs" ]
 	then
 		i=1
 		for dbdir in $dbdirs
@@ -983,7 +983,7 @@ backup() {
 		get_confvalues "directory"
 		dbdirs=$RETVAL
 
-		if [ -z "$dbdirs" -o -z "$dbsufs" ]
+		if [ -z "$dbdirs" ] || [ -z "$dbsufs" ]
 		then
 			message "alert" "[ALERT] No database directories found"
 			exit 1
@@ -1115,7 +1115,7 @@ restore() {
 		get_confvalues "directory"
 		dbdirs=$RETVAL
 
-		if [ -z "$dbdirs" -o -z "$dbsufs" ]
+		if [ -z "$dbdirs" ] || [ -z "$dbsufs" ]
 		then
 			message "alert" "[ALERT] No database directories found"
 			exit 1
@@ -2040,7 +2040,7 @@ userPassword: ${DATA_USER_PW_HASH}" >> "${DATA_FILE_PATH}"
 		get_confvalues "directory"
 		dbdirs=$RETVAL
 
-		if [ -z "$dbdirs" -o -z "$dbsufs" ]
+		if [ -z "$dbdirs" ] || [ -z "$dbsufs" ]
 		then
 			message "alert" "[ALERT] No database directories found"
 			exit 1
@@ -2108,7 +2108,7 @@ removeolddatabackups() {
 }
 
 overwrite_config_from_flat_file() {
-	if [ "x${CONVERT_CONF_AT_STARTUP}" != "x" -a -n "${SLAPD_CONF}" -a -n "${SLAPD_CONF_DIR}" ]
+	if [ "x${CONVERT_CONF_AT_STARTUP}" != "x" ] && [ -n "${SLAPD_CONF}" ] && [ -n "${SLAPD_CONF_DIR}" ]
 	then
 
 		# Test slapd.conf
