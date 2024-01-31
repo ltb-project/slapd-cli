@@ -38,7 +38,7 @@ VERSION="3.7"
 #====================================================================
 # CLI configuration file, for overloading every variable below
 #====================================================================
-PROG_NAME=`basename $0 | sed 's/^[KS][0-9][0-9]//'` # For nice messages
+PROG_NAME=$(basename $0 | sed 's/^[KS][0-9][0-9]//') # For nice messages
 CLI_CONF_FILE=/usr/local/openldap/etc/openldap/${PROG_NAME}.conf
 
 
@@ -89,7 +89,7 @@ CONVERT_CONF_AT_STARTUP=""
 # Backup
 BACKUP_AT_SHUTDOWN="1"
 BACKUP_PATH="/tmp/openldap"
-BACKUP_SUFFIX="`date +%Y%m%d%H%M%S`.ldif"
+BACKUP_SUFFIX="$(date +%Y%m%d%H%M%S).ldif"
 BACKUP_COMPRESS_EXT="" # gz, bz2, ...
 BACKUP_COMPRESS_BIN="" # /bin/gzip, /bin/bzip2, ...
 BACKUP_UNCOMPRESS_BIN="" # /bin/gunzip, /bin/bunzip2, ...
@@ -106,9 +106,9 @@ SYSTEMD_SERVICE_NAME=slapd-ltb
 SYSTEMD_LLOAD_SERVICE_NAME=lload-ltb
 
 SLAPD_VERSION="2.5" # OpenLDAP version: major.minor (don't include .patch)
-OS=`uname -s`   # To adapt message printing
-MYUID=`id -u`     # For UNIX compatibility => modify this command
-MYGID=`id -g`     # For UNIX compatibility => modify this command
+OS=$(uname -s)      # To adapt message printing
+MYUID=$(id -u)      # For UNIX compatibility => modify this command
+MYGID=$(id -g)      # For UNIX compatibility => modify this command
 declare -A PROVIDER
 TOLERANCE_CSN=1000000 # 1s of tolerance when comparing contextCSN
 
@@ -164,7 +164,7 @@ conffile_get_values() {
 	# $1: parameter in slapd.conf
 	# $RETVAL: list of values
 
-	list=`sed "s/\r//" $SLAPD_CONF | grep "^$1[[:space:]]" | grep -v '^#' | sed "s/$1[[:space:]]*//" | sed "s/ /#20/g"| sed -e 's/"//g'`
+	list=$(sed "s/\r//" $SLAPD_CONF | grep "^$1[[:space:]]" | grep -v '^#' | sed "s/$1[[:space:]]*//" | sed "s/ /#20/g"| sed -e 's/"//g')
 
 	if [ "$list" ]; then
 		RETVAL="$list"
@@ -285,7 +285,7 @@ fi
 #====================================================================
 
 # Make sure the pidfile directory exists with correct permissions
-piddir=`dirname "$SLAPD_PID_FILE"`
+piddir=$(dirname "$SLAPD_PID_FILE")
 if [ ! -d "$piddir" ]; then
 	mkdir -p "$piddir"
 	[ -z "$SLAPD_USER" ] || chown -R "$SLAPD_USER" "$piddir"
@@ -463,7 +463,7 @@ start_slapd() {
 		fi
 
 		# Is slapd launched?
-		PID=`cat $SLAPD_PID_FILE`
+		PID=$(cat $SLAPD_PID_FILE)
 		if [ ! -e /proc/$PID ]
 		then
 			message "alert" "[ALERT] OpenLDAP not running"
@@ -488,7 +488,7 @@ stop_slapd() {
 			systemctl stop "$SYSTEMD_SERVICE_NAME"
 			message "info" "[OK] OpenLDAP stopped"
 		else
-			PID=`cat $SLAPD_PID_FILE`
+			PID=$(cat $SLAPD_PID_FILE)
 			if [ $( ${PS_COMMAND_PID} | grep "${PID}" | wc -l ) -eq 0 ] ; then
 				message "info" "[OK] OpenLDAP already stopped"
 				exit 0
@@ -504,7 +504,7 @@ stop_slapd() {
 					message "alert" "[ALERT] OpenLDAP still running (PID $PID), try: $0 forcestop"
 					exit 1
 				fi
-				i=`expr $i + 1`
+				i=$(expr $i + 1)
 				sleep 1
 			done
 
@@ -597,7 +597,7 @@ start_lload() {
 		fi
 
 		# Is lload launched?
-		PID=`cat $LLOAD_PID_FILE`
+		PID=$(cat $LLOAD_PID_FILE)
 		if [ ! -e /proc/$PID ]
 		then
 			message "alert" "[ALERT] lload not running"
@@ -622,7 +622,7 @@ stop_lload() {
 			systemctl stop "$SYSTEMD_LLOAD_SERVICE_NAME"
 			message "info" "[OK] lload stopped"
 		else
-			PID=`cat $LLOAD_PID_FILE`
+			PID=$(cat $LLOAD_PID_FILE)
 			if [ $( ${PS_COMMAND_PID} | grep "${PID}" | wc -l ) -eq 0 ] ; then
 				message "info" "[OK] lload already stopped"
 				exit 0
@@ -638,7 +638,7 @@ stop_lload() {
 					message "alert" "[ALERT] lload still running (PID $PID), try to stop lload manually"
 					exit 1
 				fi
-				i=`expr $i + 1`
+				i=$(expr $i + 1)
 				sleep 1
 			done
 
@@ -663,17 +663,17 @@ lload_status() {
 	if [ ! -r $LLOAD_PID_FILE ]
 	then
 		# Escape special characters into $LLOAD_SERVICES
-		lload_services="`echo "$LLOAD_SERVICES" | sed 's/\*/\\\*/g'`"
+		lload_services="$(echo "$LLOAD_SERVICES" | sed 's/\*/\\\*/g')"
 
 		# Check if any slapd process are running
-		if [ `${PS_COMMAND_CMD} | grep $SLAPD_BIN | grep "$lload_services" | grep -v grep | wc -l` -eq 0 ]
+		if [ $(${PS_COMMAND_CMD} | grep $SLAPD_BIN | grep "$lload_services" | grep -v grep | wc -l) -eq 0 ]
 		then
 			return 1
 		else
 			return 2
 		fi
 	else
-		PID=`cat $LLOAD_PID_FILE`
+		PID=$(cat $LLOAD_PID_FILE)
 	fi
 
 	if [ ! -e /proc/$PID ]
@@ -696,7 +696,7 @@ display_lload_status() {
 
 	if [ $status -eq 0 ]
 	then
-		PID=`cat $LLOAD_PID_FILE`
+		PID=$(cat $LLOAD_PID_FILE)
 
 		message "info" "[INFO] Process lload is running (PID $PID)"
 		VER="$( slapd_version )"
@@ -705,8 +705,8 @@ display_lload_status() {
 		fi
 		message "info" "[INFO] Listening to services $LLOAD_SERVICES"
 
-		CPU=`ps -p $PID -o %cpu=`
-		MEM=`ps -p $PID -o %mem=`
+		CPU=$(ps -p $PID -o %cpu=)
+		MEM=$(ps -p $PID -o %mem=)
 
 		message "info" "[INFO] lload process usage: $CPU% CPU / $MEM% MEM"
 
@@ -734,10 +734,10 @@ forcestop() {
 	if [ ! -r $SLAPD_PID_FILE ]
 	then
 		# Escape special characters into $SLAPD_SERVICES
-		slapd_services="`echo "$SLAPD_SERVICES" | sed 's/\*/\\\*/g'`"
+		slapd_services="$(echo "$SLAPD_SERVICES" | sed 's/\*/\\\*/g')"
 
 		# Check if any slapd process are running
-		if [ `${PS_COMMAND_CMD} | grep $SLAPD_BIN | grep "$slapd_services" | grep -v grep | wc -l` -eq 0 ]
+		if [ $(${PS_COMMAND_CMD} | grep $SLAPD_BIN | grep "$slapd_services" | grep -v grep | wc -l) -eq 0 ]
 		then
 			message "info" "[INFO] Found no OpenLDAP process running with $SLAPD_SERVICES"
 		else
@@ -753,7 +753,7 @@ forcestop() {
 			fi
 		fi
 	else
-		PID=`cat $SLAPD_PID_FILE`
+		PID=$(cat $SLAPD_PID_FILE)
 		if [ $( ${PS_COMMAND_PID} | grep "${PID}" | wc -l ) -eq 0 ] ; then
 			message "info" "[OK] OpenLDAP already stopped"
 			exit 0
@@ -785,17 +785,17 @@ slapd_status() {
 	if [ ! -r $SLAPD_PID_FILE ]
 	then
 		# Escape special characters into $SLAPD_SERVICES
-		slapd_services="`echo "$SLAPD_SERVICES" | sed 's/\*/\\\*/g'`"
+		slapd_services="$(echo "$SLAPD_SERVICES" | sed 's/\*/\\\*/g')"
 
 		# Check if any slapd process are running
-		if [ `${PS_COMMAND_CMD} | grep $SLAPD_BIN | grep "$slapd_services" | grep -v grep | wc -l` -eq 0 ]
+		if [ $(${PS_COMMAND_CMD} | grep $SLAPD_BIN | grep "$slapd_services" | grep -v grep | wc -l) -eq 0 ]
 		then
 			return 1
 		else
 			return 2
 		fi
 	else
-		PID=`cat $SLAPD_PID_FILE`
+		PID=$(cat $SLAPD_PID_FILE)
 	fi
 
 	if [ ! -e /proc/$PID ]
@@ -841,7 +841,7 @@ display_status() {
 
 	if [ $status -eq 0 ]
 	then
-		PID=`cat $SLAPD_PID_FILE`
+		PID=$(cat $SLAPD_PID_FILE)
 
 		message "info" "[INFO] Process OpenLDAP is running (PID $PID)"
 		VER="$( slapd_version )"
@@ -851,8 +851,8 @@ display_status() {
 
 		message "info" "[INFO] Listening to services $SLAPD_SERVICES"
 
-		CPU=`ps -p $PID -o %cpu=`
-		MEM=`ps -p $PID -o %mem=`
+		CPU=$(ps -p $PID -o %cpu=)
+		MEM=$(ps -p $PID -o %mem=)
 
 		message "info" "[INFO] Process usage: $CPU% CPU / $MEM% MEM"
 
@@ -881,13 +881,13 @@ display_status() {
 		for dbdir in $dbdirs
 		do
 			# Table is not allowed, so we use awk
-			suf=`echo $dbsufs | awk -v j="$i" 'BEGIN{OFS=" "} {print $j}'`
-			sufprint=`echo $suf | sed "s/#20/ /"`
+			suf=$(echo $dbsufs | awk -v j="$i" 'BEGIN{OFS=" "} {print $j}')
+			sufprint=$(echo $suf | sed "s/#20/ /")
 			if [ -n $suf ]
 			then
 				message "info" "[INFO] Detected suffix: $sufprint"
 			fi
-			i=`expr $i + 1`
+			i=$(expr $i + 1)
 		done
 	fi
 
@@ -994,13 +994,13 @@ backup() {
 	for dbdir in $dbdirs
 	do
 		# Table is not allowed, so we use awk
-		suf=`echo $dbsufs | awk -v j="$i" 'BEGIN{OFS=" "} {print $j}'`
+		suf=$(echo $dbsufs | awk -v j="$i" 'BEGIN{OFS=" "} {print $j}')
 
 		if [ -z $suf ]; then
 			message "info" "[INFO] No suffix for $dbdir"
 		else
-			sufprint=`echo $suf | sed "s/#20/ /"`
-			dir=`basename $dbdir`
+			sufprint=$(echo $suf | sed "s/#20/ /")
+			dir=$(basename $dbdir)
 			file="$BACKUP_PATH/$dir-$BACKUP_SUFFIX"
 
 			if [ ! -d "${dbdir}" ] || [ -z "$( ls -A ${dbdir} )" ]; then
@@ -1047,7 +1047,7 @@ backup() {
 			fi
 		fi
 
-		i=`expr $i + 1`
+		i=$(expr $i + 1)
 	done
 
 }
@@ -1077,7 +1077,7 @@ backupconfig() {
 
 	elif [ "$SLAPD_CONF" ]
 	then
-		file="$BACKUP_PATH/slapd-`date +%Y%m%d%H%M%S`.conf"
+		file="$BACKUP_PATH/slapd-$(date +%Y%m%d%H%M%S).conf"
 		cp $SLAPD_CONF $file
 		ret=$?
 	fi
@@ -1126,16 +1126,16 @@ restore() {
 	for dbdir in $dbdirs
 	do
 		# Table is not allowed, so we use awk
-		suf=`echo $dbsufs | awk -v j="$i" 'BEGIN{OFS=" "} {print $j}'`
+		suf=$(echo $dbsufs | awk -v j="$i" 'BEGIN{OFS=" "} {print $j}')
 
 		if [ -z $suf ]; then
 			message "info" "[INFO] No suffix for $dbdir"
 		else
-			sufprint=`echo $suf | sed "s/#20/ /"`
-			dir=`basename $dbdir`
+			sufprint=$(echo $suf | sed "s/#20/ /")
+			dir=$(basename $dbdir)
 
 			# Get the most recent backup for this database
-			file=`ls -1t "$BACKUP_PATH/$dir-"* 2>/dev/null | head -1`
+			file=$(ls -1t "$BACKUP_PATH/$dir-"* 2>/dev/null | head -1)
 
 			if [ -z $file ]; then
 				message "info" "[INFO] No backup file for $sufprint, skipping..."
@@ -1207,7 +1207,7 @@ restore() {
 				fi
 			fi
 		fi
-		i=`expr $i + 1`
+		i=$(expr $i + 1)
 	done
 
 }
@@ -1219,7 +1219,7 @@ restoreconfig() {
 	if [ "$SLAPD_CONF_DIR" ]
 	then
 		# Get the most recent backup of cn=config
-		file=`ls -1t "$BACKUP_PATH/config-"* 2>/dev/null | head -1`
+		file=$(ls -1t "$BACKUP_PATH/config-"* 2>/dev/null | head -1)
 
 		if [ -z $file ]; then
 			message "info" "[INFO] No configuration backup found, skipping..."
@@ -1246,7 +1246,7 @@ restoreconfig() {
 	elif [ "$SLAPD_CONF" ]
 	then
 		# Get the most recent backup of slapd.conf
-		file=`ls -1t "$BACKUP_PATH/slapd-"*.conf 2>/dev/null | head -1`
+		file=$(ls -1t "$BACKUP_PATH/slapd-"*.conf 2>/dev/null | head -1)
 
 		if [ -z $file ]; then
 			message "info" "[INFO] No configuration backup found, skipping..."
@@ -1557,7 +1557,7 @@ import_flat_config_template() {
 
 	if [ -n "$( ls -A ${SLAPD_CONF} 2>/dev/null )" ] ; then
 		message "info" "[INFO] Configuration data found, launch configuration backup"
-		cp -a "${SLAPD_CONF}" "$BACKUP_PATH/slapd-`date +%Y%m%d%H%M%S`.conf"
+		cp -a "${SLAPD_CONF}" "$BACKUP_PATH/slapd-$(date +%Y%m%d%H%M%S).conf"
 	fi
 
 	if [ -z ${CONFIG_FLAT_TEMPLATE_FILE+x} ] || [ "${CONFIG_FLAT_TEMPLATE_FILE}" = "" ]; then
