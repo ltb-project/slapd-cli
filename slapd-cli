@@ -489,7 +489,7 @@ stop_slapd() {
 			message "info" "[OK] OpenLDAP stopped"
 		else
 			PID=$(cat $SLAPD_PID_FILE)
-			if [ $( ${PS_COMMAND_PID} | grep "${PID}" | wc -l ) -eq 0 ] ; then
+			if [ $( ${PS_COMMAND_PID} | grep -c "${PID}" ) -eq 0 ] ; then
 				message "info" "[OK] OpenLDAP already stopped"
 				exit 0
 			fi
@@ -623,7 +623,7 @@ stop_lload() {
 			message "info" "[OK] lload stopped"
 		else
 			PID=$(cat "$LLOAD_PID_FILE")
-			if [ $( ${PS_COMMAND_PID} | grep "${PID}" | wc -l ) -eq 0 ] ; then
+			if [ $( ${PS_COMMAND_PID} | grep -c "${PID}" ) -eq 0 ] ; then
 				message "info" "[OK] lload already stopped"
 				exit 0
 			fi
@@ -666,7 +666,7 @@ lload_status() {
 		lload_services="$(echo "$LLOAD_SERVICES" | sed 's/\*/\\\*/g')"
 
 		# Check if any slapd process are running
-		if [ $(${PS_COMMAND_CMD} | grep $SLAPD_BIN | grep "$lload_services" | grep -v grep | wc -l) -eq 0 ]
+		if [ $(${PS_COMMAND_CMD} | grep $SLAPD_BIN | grep "$lload_services" | grep -c -v grep) -eq 0 ]
 		then
 			return 1
 		else
@@ -737,7 +737,7 @@ forcestop() {
 		slapd_services="$(echo "$SLAPD_SERVICES" | sed 's/\*/\\\*/g')"
 
 		# Check if any slapd process are running
-		if [ $(${PS_COMMAND_CMD} | grep $SLAPD_BIN | grep "$slapd_services" | grep -v grep | wc -l) -eq 0 ]
+		if [ $(${PS_COMMAND_CMD} | grep $SLAPD_BIN | grep "$slapd_services" | grep -c -v grep) -eq 0 ]
 		then
 			message "info" "[INFO] Found no OpenLDAP process running with $SLAPD_SERVICES"
 		else
@@ -754,7 +754,7 @@ forcestop() {
 		fi
 	else
 		PID=$(cat $SLAPD_PID_FILE)
-		if [ $( ${PS_COMMAND_PID} | grep "${PID}" | wc -l ) -eq 0 ] ; then
+		if [ $( ${PS_COMMAND_PID} | grep -c "${PID}" ) -eq 0 ] ; then
 			message "info" "[OK] OpenLDAP already stopped"
 			exit 0
 		fi
@@ -788,7 +788,7 @@ slapd_status() {
 		slapd_services="$(echo "$SLAPD_SERVICES" | sed 's/\*/\\\*/g')"
 
 		# Check if any slapd process are running
-		if [ $(${PS_COMMAND_CMD} | grep $SLAPD_BIN | grep "$slapd_services" | grep -v grep | wc -l) -eq 0 ]
+		if [ $(${PS_COMMAND_CMD} | grep $SLAPD_BIN | grep "$slapd_services" | grep -c -v grep) -eq 0 ]
 		then
 			return 1
 		else
