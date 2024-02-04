@@ -81,6 +81,8 @@ SLAPTEST_BIN="$SLAPD_PATH/sbin/slaptest"
 LDAPSEARCH_BIN="${SLAPD_PATH}/bin/ldapsearch"
 LDAPSEARCH_PARAMS=""
 
+CONVERT_CONF_AT_STARTUP=""
+
 # Backup
 BACKUP_AT_SHUTDOWN="1"
 BACKUP_PATH="/tmp/openldap"
@@ -2080,11 +2082,59 @@ removeolddatabackups() {
         fi
 }
 
+overwrite_config_from_flat_file() {
+	if [ "x${CONVERT_CONF_AT_STARTUP}" != "x" -a ! -z "${SLAPD_CONF}" -a ! -z "${SLAPD_CONF_DIR}" ]
+	then
+
+		# Test slapd.conf
+		${SLAPTEST_BIN} -u -f ${SLAPD_CONF} > /dev/null 2>&1
+
+		if [ $? -eq 0 ]
+		then
+
+			message "info" "[INFO] regenerate cn=config from ${SLAPD_CONF}"
+
+			# Delete current cn=config content
+			if [ -z "${SU}" ]
+			then
+				rm -rf "${SLAPD_CONF_DIR}/"*
+			else
+				${SU} "rm -rf ${SLAPD_CONF_DIR}/"*
+			fi
+
+			# Convert configuration
+			if [ -z "${SU}" ]
+			then
+				${SLAPTEST_BIN} -f ${SLAPD_CONF} -F ${SLAPD_CONF_DIR}
+			else
+				${SU} "${SLAPTEST_BIN} -f ${SLAPD_CONF} -F ${SLAPD_CONF_DIR}"
+			fi
+
+			# Test result of configuration import/conversion
+			if [ $? -eq 0 ]
+			then
+				message "info" "[OK] cn=config successfully regenerated from ${SLAPD_CONF}"
+			else
+				message "alert" "[ALERT] Problem occurred while regenerating from ${SLAPD_CONF}"
+				exit 1
+			fi
+
+			# Also test if new configuration is valid
+			configtest
+
+		else
+			message "error" "[ERROR] Bad configuration in ${SLAPD_CONF}, cannot regenerate cn=config"
+			exit 1
+		fi
+	fi
+}
+
 #====================================================================
 # Action switch
 #====================================================================
 case $1 in
 	start)
+	overwrite_config_from_flat_file
 	configtest
 	start_slapd
 	;;
@@ -2097,15 +2147,18 @@ case $1 in
 	restart)
 	configtest
 	stop_slapd
+	overwrite_config_from_flat_file
 	start_slapd
 	;;
 	debug)
 	stop_slapd
+	overwrite_config_from_flat_file
 	start_slapd $DEBUG_LEVEL
 	;;
 	force-restart)
 	configtest
 	forcestop
+	overwrite_config_from_flat_file
 	start_slapd
 	;;
 	status)
