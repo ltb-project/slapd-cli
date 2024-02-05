@@ -248,14 +248,14 @@ _use_systemctl=0
 
 # When systemd runs a shell script, bash sets PPID to 1 (init)
 if [ $PPID -ne 1 ] && \
-    # This variable lets the user disable systemd redirection
-    [ -z "$SYSTEMCTL_SKIP_REDIRECT" ] && \
-    # This tests whether systemd is currently managing the systemd
-    [ -d /run/systemd/system ] && \
-    # This variable is set when systemd >=232 runs a service
-    # We need this test in case systemd does not run the slapd-cli script
-    # directly (PPID>1) but runs it through /etc/init.d/slapd
-    [ -z "$INVOCATION_ID" ]  ;
+	# This variable lets the user disable systemd redirection
+	[ -z "$SYSTEMCTL_SKIP_REDIRECT" ] && \
+	# This tests whether systemd is currently managing the systemd
+	[ -d /run/systemd/system ] && \
+	# This variable is set when systemd >=232 runs a service
+	# We need this test in case systemd does not run the slapd-cli script
+	# directly (PPID>1) but runs it through /etc/init.d/slapd
+	[ -z "$INVOCATION_ID" ]  ;
 then
 	_use_systemctl=1
 fi
@@ -323,10 +323,10 @@ fi
 # Create LDAPI socket
 if [ "$LDAPI_SOCKETDIR" -a ! -r "$LDAPI_SOCKETDIR" ]
 then
-    message "info" "[INFO] Create LDAPI socket dir $LDAPI_SOCKETDIR"
-    mkdir -p "$LDAPI_SOCKETDIR"
-    [ -z "$SLAPD_USER" ] || chown -R "$SLAPD_USER" "$LDAPI_SOCKETDIR"
-    [ -z "$SLAPD_GROUP" ] || chgrp -R "$SLAPD_GROUP" "$LDAPI_SOCKETDIR"
+	message "info" "[INFO] Create LDAPI socket dir $LDAPI_SOCKETDIR"
+	mkdir -p "$LDAPI_SOCKETDIR"
+	[ -z "$SLAPD_USER" ] || chown -R "$SLAPD_USER" "$LDAPI_SOCKETDIR"
+	[ -z "$SLAPD_GROUP" ] || chgrp -R "$SLAPD_GROUP" "$LDAPI_SOCKETDIR"
 fi
 
 #====================================================================
@@ -2067,19 +2067,19 @@ userPassword: ${DATA_USER_PW_HASH}" >> ${DATA_FILE_PATH}
 }
 
 removeoldconfigbackups() {
-        if [ "x$BACKUP_CONFIG_DELETE_AFTER_DAYS" != "x" ]
-        then
-                message "info" "[INFO] Removing config backup files older than $BACKUP_CONFIG_DELETE_AFTER_DAYS days"
-                find $BACKUP_PATH -type f -name 'config-*' -mtime +$BACKUP_CONFIG_DELETE_AFTER_DAYS -delete -print
-        fi
+	if [ "x$BACKUP_CONFIG_DELETE_AFTER_DAYS" != "x" ]
+	then
+		message "info" "[INFO] Removing config backup files older than $BACKUP_CONFIG_DELETE_AFTER_DAYS days"
+		find $BACKUP_PATH -type f -name 'config-*' -mtime +$BACKUP_CONFIG_DELETE_AFTER_DAYS -delete -print
+	fi
 }
 
 removeolddatabackups() {
-        if [ "x$BACKUP_DATA_DELETE_AFTER_DAYS" != "x" ]
-        then
-                message "info" "[INFO] Removing data backup files older than $BACKUP_DATA_DELETE_AFTER_DAYS days"
-                find $BACKUP_PATH -type f ! -name 'config-*' -mtime +$BACKUP_DATA_DELETE_AFTER_DAYS -delete -print
-        fi
+	if [ "x$BACKUP_DATA_DELETE_AFTER_DAYS" != "x" ]
+	then
+		message "info" "[INFO] Removing data backup files older than $BACKUP_DATA_DELETE_AFTER_DAYS days"
+		find $BACKUP_PATH -type f ! -name 'config-*' -mtime +$BACKUP_DATA_DELETE_AFTER_DAYS -delete -print
+	fi
 }
 
 overwrite_config_from_flat_file() {
@@ -2133,103 +2133,128 @@ overwrite_config_from_flat_file() {
 # Action switch
 #====================================================================
 case $1 in
+
 	start)
-	overwrite_config_from_flat_file
-	configtest
-	start_slapd
-	;;
+		overwrite_config_from_flat_file
+		configtest
+		start_slapd
+		;;
+
 	stop)
-	stop_slapd
-	;;
+		stop_slapd
+		;;
+
 	forcestop)
-	forcestop
-	;;
+		forcestop
+		;;
+
 	restart)
-	configtest
-	stop_slapd
-	overwrite_config_from_flat_file
-	start_slapd
-	;;
+		configtest
+		stop_slapd
+		overwrite_config_from_flat_file
+		start_slapd
+		;;
+
 	debug)
-	stop_slapd
-	overwrite_config_from_flat_file
-	start_slapd $DEBUG_LEVEL
-	;;
+		stop_slapd
+		overwrite_config_from_flat_file
+		start_slapd $DEBUG_LEVEL
+		;;
+
 	force-restart)
-	configtest
-	forcestop
-	overwrite_config_from_flat_file
-	start_slapd
-	;;
+		configtest
+		forcestop
+		overwrite_config_from_flat_file
+		start_slapd
+		;;
+
 	status)
-	display_status
-	;;
+		display_status
+		;;
+
 	configtest)
-	configtest
-	;;
+		configtest
+		;;
+
 	reindex)
-	reindex
-	;;
+		reindex
+		;;
+
 	backup)
-	backup
-	removeolddatabackups
-	;;
+		backup
+		removeolddatabackups
+		;;
+
 	restore)
-	stop_slapd
-	restore
-	start_slapd
-	;;
+		stop_slapd
+		restore
+		start_slapd
+		;;
+
 	backupconfig)
-	backupconfig
-	removeoldconfigbackups
-	;;
+		backupconfig
+		removeoldconfigbackups
+		;;
+
 	restoreconfig)
-	stop_slapd
-	restoreconfig
-	configtest
-	start_slapd
-	;;
+		stop_slapd
+		restoreconfig
+		configtest
+		start_slapd
+		;;
+
 	checksync)
-	check_sync
-	;;
+		check_sync
+		;;
+
 	importflatconfigtemplate)
-	stop_slapd
-	import_flat_config_template
-	;;
+		stop_slapd
+		import_flat_config_template
+		;;
+
 	importldifconfigtemplate)
-	stop_slapd
-	import_ldif_config_template
-	;;
+		stop_slapd
+		import_ldif_config_template
+		;;
+
 	convertconfig)
-	shift
-	convert_config $*
-	;;
+		shift
+		convert_config $*
+		;;
+
 	buildconfigtemplate)
-	shift
-	build_config_template $*
-	;;
+		shift
+		build_config_template $*
+		;;
+
 	importdatatemplate)
-	backup
-	stop_slapd
-	import_data_template
-	;;
+		backup
+		stop_slapd
+		import_data_template
+		;;
+
 	lloadstart)
-	start_lload
-	;;
+		start_lload
+		;;
+
 	lloadstop)
-	stop_lload
-	;;
+		stop_lload
+		;;
+
 	lloadstatus)
-	display_lload_status
-	;;
+		display_lload_status
+		;;
+
 	removeoldbackups)
-	removeoldconfigbackups
-	removeolddatabackups
-	;;
+		removeoldconfigbackups
+		removeolddatabackups
+		;;
+
 	*)
-	display_usage
-	exit 1
-	;;
+		display_usage
+		exit 1
+		;;
+
 esac
 
 #====================================================================
