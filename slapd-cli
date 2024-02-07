@@ -1415,9 +1415,9 @@ check_sync() {
 			# Certificate authentication
 			if [[ -n "$PCERT" ]] && [[ -n "$PKEY" ]] ; then
 				if [[ -n "$PCACERTDIR" ]]; then
-					CERTVARS='LDAPTLS_CACERTDIR="${PCACERTDIR}" LDAPTLS_CERT="${PCERT}" LDAPTLS_KEY="${PKEY}" LDAPTLS_REQCERT="try"'
+					CERTVARS="LDAPTLS_CACERTDIR=${PCACERTDIR} LDAPTLS_CERT=${PCERT} LDAPTLS_KEY=${PKEY} LDAPTLS_REQCERT=try"
 				else
-					CERTVARS='LDAPTLS_CACERT="${PCACERT}" LDAPTLS_CERT="${PCERT}" LDAPTLS_KEY="${PKEY}" LDAPTLS_REQCERT="try"'
+					CERTVARS="LDAPTLS_CACERT=${PCACERT} LDAPTLS_CERT=${PCERT} LDAPTLS_KEY=${PKEY} LDAPTLS_REQCERT=""try"
 				fi
 				CONTEXTCSN=$(eval "${CERTVARS}" ${LDAPSEARCH_BIN} -Y EXTERNAL -H "${PHOST}" -b "${PBASEDN}" -o nettimeout=5 -s base "${LDAPSEARCH_PARAMS}" contextCSN -LLL 2>/dev/null )
 			# If bindDN is empty, try anonymous bind
@@ -1440,9 +1440,9 @@ check_sync() {
 			# Certificate authentication
 			if [[ -n "$PCERT" ]] && [[ -n "$PKEY" ]] ; then
 				if [[ -n "$PCACERTDIR" ]]; then
-					CERTVARS='LDAPTLS_CACERTDIR="${PCACERTDIR}" LDAPTLS_CERT="${PCERT}" LDAPTLS_KEY="${PKEY}" LDAPTLS_REQCERT="try"'
+					CERTVARS="LDAPTLS_CACERTDIR=${PCACERTDIR} LDAPTLS_CERT=${PCERT} LDAPTLS_KEY=${PKEY} LDAPTLS_REQCERT=try"
 				else
-					CERTVARS='LDAPTLS_CACERT="${PCACERT}" LDAPTLS_CERT="${PCERT}" LDAPTLS_KEY="${PKEY}" LDAPTLS_REQCERT="try"'
+					CERTVARS="LDAPTLS_CACERT=${PCACERT} LDAPTLS_CERT=${PCERT} LDAPTLS_KEY=${PKEY} LDAPTLS_REQCERT=try"
 				fi
 				localContextCSN=$(eval "${CERTVARS}" ${LDAPSEARCH_BIN} -Y EXTERNAL -H "${LOCAL_URL_SSL}" -b "${PBASEDN}" -o nettimeout=5 -s base "${LDAPSEARCH_PARAMS}" contextCSN -LLL 2>/dev/null | grep 'contextCSN' | sed -e 's/^contextCSN: //' )
 			# If bindDN is empty, try anonymous bind
