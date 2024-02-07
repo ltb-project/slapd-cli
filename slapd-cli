@@ -1343,24 +1343,24 @@ compare_CSN() {
 	#YYYYMMDDhhmmss.uuuuuu (where u is microseconds)
 	csn1us="$( date --date="${csn1:0:4}-${csn1:4:2}-${csn1:6:2} ${csn1:8:2}:${csn1:10:2}:${csn1:12:2}" +%s )"
 	csn2us="$( date --date="${csn2:0:4}-${csn2:4:2}-${csn2:6:2} ${csn2:8:2}:${csn2:10:2}:${csn2:12:2}" +%s )"
-	let csn1us="${csn1us}*1000000"
-	let csn2us="${csn2us}*1000000"
+	(( csn1us="${csn1us}*1000000" ))
+	(( csn2us="${csn2us}*1000000" ))
 
 	# if microseconds part present, add microseconds
 	if [ "${csn1:14:1}" = "." ]; then
 		us=${csn1:15:6}
-		us=$(( $( printf %s "${us}" | sed -e 's/^[0]\+//' ) ))
-		let csn1us="${csn1us}+${us}"
+		us=$(( $( printf '%s' "${us}" | sed -e 's/^[0]\+//' ) ))
+		(( csn1us="${csn1us}+${us}" ))
 	fi
 	if [ "${csn2:14:1}" = "." ]; then
 		us=${csn2:15:6}
-		us=$(( $( printf %s "${us}" | sed -e 's/^[0]\+//' ) ))
-		let csn2us="${csn2us}+${us}"
+		us=$(( $( printf '%s' "${us}" | sed -e 's/^[0]\+//' ) ))
+		(( csn2us="${csn2us}+${us}" ))
 	fi
 
 	# compute delta between CSN
-	let delta="${csn2us}-${csn1us}"
-	let deltaabs=${delta#-}
+	(( delta="${csn2us}-${csn1us}" ))
+	(( deltaabs=${delta#-} ))
 	if (( ${deltaabs} <= ${TOLERANCE_CSN} )); then
 		return 0
 	else
@@ -1431,7 +1431,7 @@ check_sync() {
 			# Checking status of previous command
 			if [ $? -ne 0 ]; then
 				echo "    ERROR: search on remote host impossible!"
-				let "RES=-1"
+				(( "RES=-1" ))
 				break
 			fi
 			CONTEXTCSN=$( echo "$CONTEXTCSN" | grep contextCSN | sed -e 's/^contextCSN: //i' )
@@ -1473,11 +1473,11 @@ check_sync() {
 						echo "    INFO: remote ($CSN) and local ($matchingLocalContextCSN) contextCSN found and synchronized"
 					else
 						echo "    ERROR: remote ($CSN) and local ($matchingLocalContextCSN) contextCSN found, but not synchronized!"
-						let "RES=RES+1"
+						(( "RES=RES+1" ))
 					fi
 				else
 					echo "    ERROR: no matching local contextCSN ($localContextCSN) found for remote ($CSN) contextCSN!"
-					let "RES=RES+1"
+					(( "RES=RES+1" ))
 				fi
 			done
 
