@@ -240,6 +240,7 @@ syncrepl_get_value() {
 #====================================================================
 if [ -f "${CLI_CONF_FILE}" ]
 then
+	# shellcheck source=slapd-cli.conf
 	. "${CLI_CONF_FILE}"
 	message "info" "[INFO] Using ${CLI_CONF_FILE} for configuration"
 else
