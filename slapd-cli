@@ -1361,7 +1361,7 @@ compare_CSN() {
 	# compute delta between CSN
 	(( delta="${csn2us}-${csn1us}" ))
 	(( deltaabs=${delta#-} ))
-	if (( ${deltaabs} <= ${TOLERANCE_CSN} )); then
+	if (( deltaabs <= TOLERANCE_CSN )); then
 		return 0
 	else
 		if [ "${delta}" -gt "0" ]; then
