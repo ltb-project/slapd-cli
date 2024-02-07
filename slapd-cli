@@ -106,7 +106,6 @@ SYSTEMD_SERVICE_NAME=slapd-ltb
 SYSTEMD_LLOAD_SERVICE_NAME=lload-ltb
 
 SLAPD_VERSION="2.5" # OpenLDAP version: major.minor (don't include .patch)
-OS=$(uname -s)      # To adapt message printing
 MYUID=$(id -u)      # For UNIX compatibility => modify this command
 MYGID=$(id -g)      # For UNIX compatibility => modify this command
 declare -A PROVIDER
