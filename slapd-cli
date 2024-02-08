@@ -109,6 +109,9 @@ MYGID=`id -g`     # For UNIX compatibility => modify this command
 declare -A PROVIDER
 TOLERANCE_CSN=1000000 # 1s of tolerance when comparing contextCSN
 
+TMPFS_MOUNTPOINT="/slapd-tmpfs"
+TMPFS_SIZE="8G"
+
 # Return functions' value
 RETVAL=""
 
@@ -349,6 +352,7 @@ display_usage() {
 	printf "%s\n" "  - ${bold}reindex${normal}: index or reindex database"
 	printf "%s\n" "  - ${bold}backup${normal}: backup the data"
 	printf "%s\n" "  - ${bold}restore${normal}: restore the data"
+	printf "%s\n" "  - ${bold}fastrestore${normal}: restore the data using a temporary tmpfs"
 	printf "%s\n" "  - ${bold}backupconfig${normal}: backup the configuration"
 	printf "%s\n" "  - ${bold}restoreconfig${normal}: restore the configuration"
 	printf "%s\n" "  - ${bold}checksync${normal}: check the synchronization state of the current instance to every provider found in configuration"
@@ -1073,6 +1077,8 @@ backupconfig() {
 }
 
 restore() {
+
+	RESTORE_TYPE="$1"
 	# Start message
 	message "info" "[INFO] Launching OpenLDAP database restore..."
 
@@ -1114,7 +1120,7 @@ restore() {
 			dir=`basename $dbdir`
 
 			# Get the most recent backup for this database
-			file=`ls -1t "$BACKUP_PATH/$dir-"* 2>/dev/null | head -1`
+			file=`ls -1t "$BACKUP_PATH/$dir-"[0-9]*.ldif 2>/dev/null | head -1`
 
 			if [ -z $file ]; then
 				message "info" "[INFO] No backup file for $sufprint, skipping..."
@@ -1151,21 +1157,81 @@ restore() {
 					$SU "rm -rf $dbdir/"*
 				fi
 
-				# Import backup
-				if [ -z "$SU" ]
+				# fastrestore: import data in a tmpfs, then move data
+				if [ ${RESTORE_TYPE} = "fast" ]
 				then
-					$SLAPADD_BIN -b "$sufprint" $SLAPADD_PARAMS
-				else
-					$SU "$SLAPADD_BIN -b \"$sufprint\" $SLAPADD_PARAMS"
-				fi
+					# Do a backup of the current configuration, and get the backup file path
+					CURRENT_BACKUP_FILE=$( backupconfig | grep "Configuration saved in" | sed -e 's/^.*Configuration saved in \([^ ]\+\).*$/\1/' )
 
-				# alert
-				if [ $? -ne 0 ]
-				then
-					message "alert" "[ALERT] OpenLDAP database restore failed for $sufprint"
-					exit 1
+					# Duplicate newly created backup file
+					TMP_BACKUP_FILE="${CURRENT_BACKUP_FILE}z"
+					cp -a "${CURRENT_BACKUP_FILE}" "${TMP_BACKUP_FILE}"
+
+					if [ -f "${TMP_BACKUP_FILE}" ]
+					then
+						# Mount a temporary file system
+						mount -t tmpfs -o size=${TMPFS_SIZE} tmpfs ${TMPFS_MOUNTPOINT}
+
+						# If cn=config mode
+						if [ "$SLAPD_CONF_DIR" ]
+						then
+							# Get the database directory location in the section containing the current suffix
+							CURRENT_DATA_DIR=$( awk '1; NF==1 && $1=";"{print x}' "${TMP_BACKUP_FILE}" | awk "/olcSuffix: ${sufprint}/" RS= | grep -E '^olcDbDirectory:' | sed -e 's/^olcDbDirectory: //' )
+
+							# Replace the database directory location, corresponding to current suffix, to the tmpfs mountpoint
+							sed -i -e "s#^olcDbDirectory: ${CURRENT_DATA_DIR}\$#olcDbDirectory: ${TMPFS_MOUNTPOINT}#" ${TMP_BACKUP_FILE}
+
+							# Restore the configuration with the new tmpfs data path
+							restoreconfig
+
+							# Import backup
+							if [ -z "$SU" ]
+							then
+								$SLAPADD_BIN -b "$sufprint" $SLAPADD_PARAMS
+							else
+								$SU "$SLAPADD_BIN -b \"$sufprint\" $SLAPADD_PARAMS"
+							fi
+
+							# Move import into database directory
+							rm -rf ${CURRENT_DATA_DIR}/*
+							mv ${TMPFS_MOUNTPOINT}/* ${CURRENT_DATA_DIR}
+
+							# Remove useless backup (the one containing the data path pointing to the tmpfs mountpoint)
+							rm -f "${TMP_BACKUP_FILE}"
+
+							# Restore the previous configuration
+							restoreconfig
+
+							# Remove previous configuration backup
+							rm -f ${CURRENT_BACKUP_FILE}
+
+						elif [ "$SLAPD_CONF" ]
+						then
+							message "alert" "[ALERT] Unsupported mode (slapd.conf) for fastrestore"
+							exit 1
+						fi
+						umount ${TMPFS_MOUNTPOINT}
+					else
+						message "alert" "[ALERT] Config backup failed"
+						exit 1
+					fi
+				else
+					# Import backup
+					if [ -z "$SU" ]
+					then
+						$SLAPADD_BIN -b "$sufprint" $SLAPADD_PARAMS
+					else
+						$SU "$SLAPADD_BIN -b \"$sufprint\" $SLAPADD_PARAMS"
+					fi
+
+					# alert
+					if [ $? -ne 0 ]
+					then
+						message "alert" "[ALERT] OpenLDAP database restore failed for $sufprint"
+						exit 1
+					fi
+					message "info" "[OK] Data restored for $sufprint"
 				fi
-				message "info" "[OK] Data restored for $sufprint"
 
 				# compress backup again if needed
 				if [ "$BACKUP_COMPRESS_EXT" ]
@@ -2187,7 +2253,13 @@ case $1 in
 
 	restore)
 		stop_slapd
-		restore
+		restore "slow"
+		start_slapd
+		;;
+
+	fastrestore)
+		stop_slapd
+		restore "fast"
 		start_slapd
 		;;
 
