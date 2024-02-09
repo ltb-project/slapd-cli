@@ -1170,6 +1170,7 @@ restore() {
 					if [ -f "${TMP_BACKUP_FILE}" ]
 					then
 						# Mount a temporary file system
+						mkdir -p "${TMPFS_MOUNTPOINT}"
 						mount -t tmpfs -o size=${TMPFS_SIZE} tmpfs ${TMPFS_MOUNTPOINT}
 
 						# If cn=config mode
