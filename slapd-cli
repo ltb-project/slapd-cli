@@ -1326,12 +1326,12 @@ compare_CSN() {
 	# if microseconds part present, add microseconds
 	if [ "${csn1:14:1}" = "." ]; then
 		us=${csn1:15:6}
-		us=$(( $( printf \"${us}\" | sed -e 's/^[0]\+//' ) ))
+		us=$(( $( printf %s "${us}" | sed -e 's/^[0]\+//' ) ))
 		let csn1us="${csn1us}+${us}"
 	fi
 	if [ "${csn2:14:1}" = "." ]; then
 		us=${csn2:15:6}
-		us=$(( $( printf \"${us}\" | sed -e 's/^[0]\+//' ) ))
+		us=$(( $( printf %s "${us}" | sed -e 's/^[0]\+//' ) ))
 		let csn2us="${csn2us}+${us}"
 	fi
 
