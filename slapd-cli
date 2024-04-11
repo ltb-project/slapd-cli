@@ -1254,20 +1254,20 @@ get_provider_config() {
 		SUF=""
 		while read -r LINE
 		do
-			if printf "$LINE" | grep -q -P '^olcSuffix:[ \t]+' ; then
-				SUF="$( printf "$LINE" | sed -e 's/^olcSuffix:[ \t]\+//' -e 's/"//g' )"
+			if printf %s "$LINE" | grep -q -P '^olcSuffix:[ \t]+' ; then
+				SUF="$( printf %s "$LINE" | sed -e 's/^olcSuffix:[ \t]\+//' -e 's/"//g' )"
 			fi
 			# test if the olcSyncrepl attribute is base64 encoded - decode it if yes before processing the line
-			if printf "$LINE" | grep -q -P '^olcSyncrepl::' ; then
+			if printf %s "$LINE" | grep -q -P '^olcSyncrepl::' ; then
 					LINEDECODED="olcSyncrepl: "
 					LINEDECODED+=$(echo "$LINE" | cut -d ' ' -f 2 | base64 -d -i)
 					LINE=$LINEDECODED
 			fi
-			if printf "$LINE" | grep -q -P '^olcSyncrepl:[ \t]+' ; then
+			if printf %s "$LINE" | grep -q -P '^olcSyncrepl:[ \t]+' ; then
 				# add detected provider to the list of detected providers for this suffix (\n separated)
-				PROVIDER[${SUF}]="${PROVIDER[$SUF]}\n$( printf "${LINE}" | sed -e 's/olcSyncrepl:[ \t]\+{*[0-9]*}*//' )"
+				PROVIDER[${SUF}]="${PROVIDER[$SUF]}\n$( printf %s "${LINE}" | sed -e 's/olcSyncrepl:[ \t]\+{*[0-9]*}*//' )"
 				# remove starting \n
-				PROVIDER[${SUF}]="$( printf "${PROVIDER[${SUF}]}" | sed -e ':a;N;$!ba;s/^\n//g' )"
+				PROVIDER[${SUF}]="$( printf %s "${PROVIDER[${SUF}]}" | sed -e ':a;N;$!ba;s/^\n//g' )"
 			fi
 		done <<< "${DUMP}"
 
@@ -1278,32 +1278,32 @@ get_provider_config() {
 		while IFS= read -r LINE
 		do
 			# unwrap file (ie, join lines that begins with space or tab
-			if printf "$LINE" | grep -q -P '^[ \t]+' ; then
+			if printf %s "$LINE" | grep -q -P '^[ \t]+' ; then
 				# remove starting space or tab
-				LINE=$( printf "${LINE}" | sed -e 's/^[ \t]\+//g' )
-				DUMP=$( printf "${DUMP} ${LINE}" )
+				LINE=$( printf %s "${LINE}" | sed -e 's/^[ \t]\+//g' )
+				DUMP=$( printf %s "${DUMP} ${LINE}" )
 			else
-				DUMP=$( printf "${DUMP}\n${LINE}" )
+				DUMP=$( printf %s "${DUMP}\n${LINE}" )
 			fi
 		done < "$SLAPD_CONF"
 		# parse DUMP variable for getting providers
 		SUF=""
 		while read -r LINE
 		do
-			if printf "$LINE" | grep -q -P '^suffix[ \t]+' ; then
-				SUF="$( printf "$LINE" | sed -e 's/^suffix[ \t]\+//' -e 's/"//g' )"
+			if printf %s "$LINE" | grep -q -P '^suffix[ \t]+' ; then
+				SUF="$( printf %s "$LINE" | sed -e 's/^suffix[ \t]\+//' -e 's/"//g' )"
 			fi
-			if printf "$LINE" | grep -q -P '^syncrepl[ \t]+' ; then
+			if printf %s "$LINE" | grep -q -P '^syncrepl[ \t]+' ; then
 				# add detected provider to the list of detected providers for this suffix (\n separated)
-				PROVIDER[${SUF}]="${PROVIDER[$SUF]}\n$( printf "${LINE}" | sed -e 's/syncrepl[ \t]\+//' )"
+				PROVIDER[${SUF}]="${PROVIDER[$SUF]}\n$( printf %s "${LINE}" | sed -e 's/syncrepl[ \t]\+//' )"
 				# remove starting \n
-				PROVIDER[${SUF}]="$( printf "${PROVIDER[${SUF}]}" | sed -e ':a;N;$!ba;s/^\n//g' )"
+				PROVIDER[${SUF}]="$( printf %s "${PROVIDER[${SUF}]}" | sed -e ':a;N;$!ba;s/^\n//g' )"
 			fi
 		done <<< "${DUMP}"
 	fi
 	for key in "${!PROVIDER[@]}"; do
-		printf "Suffix: ${key}\n"
-		printf "detected providers:\n${PROVIDER[$key]}\n\n"
+		printf %s "Suffix: ${key}\n"
+		printf %s "detected providers:\n${PROVIDER[$key]}\n\n"
 	done
 }
 
