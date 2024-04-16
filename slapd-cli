@@ -796,16 +796,16 @@ slapd_version() {
 
 	# test if SLAPD_SERVICES contains an ldapi:/// listening port
 	if echo "${SLAPD_SERVICES}" | grep -q 'ldapi:' ; then
-		VERSION=$( ${LDAPSEARCH_BIN} -Y EXTERNAL -H "${HOST}" -b "${BASE}" -s "${SCOPE}" ${LDAPSEARCH_PARAMS} -LLL "${ATTR}" 2>/dev/null| grep "${ATTR}" )
+		OPENLDAP_VERSION=$( ${LDAPSEARCH_BIN} -Y EXTERNAL -H "${HOST}" -b "${BASE}" -s "${SCOPE}" ${LDAPSEARCH_PARAMS} -LLL "${ATTR}" 2>/dev/null| grep "${ATTR}" )
 	fi
 
-	if [ "${VERSION}" = "" ] ; then
+	if [ "${OPENLDAP_VERSION}" = "" ] ; then
 		if [ ! -z ${SLAPD_BIN+x} ] && [ "${SLAPD_BIN}" != "" ] ; then
-			VERSION="$( ${SLAPD_BIN} -VV 2>&1 | grep 'OpenLDAP' )"
+			OPENLDAP_VERSION="$( ${SLAPD_BIN} -VV 2>&1 | grep 'OpenLDAP' )"
 		fi
 	fi
-	VERSION=$( printf "%s" "${VERSION}" | sed -e 's/^.*\(slapd .*(.*)\).*$/\1/' )
-	printf "%s" "${VERSION}"
+	OPENLDAP_VERSION=$( printf "%s" "${OPENLDAP_VERSION}" | sed -e 's/^.*\(slapd .*(.*)\).*$/\1/' )
+	printf "%s" "${OPENLDAP_VERSION}"
 }
 
 display_status() {
