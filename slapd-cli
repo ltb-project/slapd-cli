@@ -801,7 +801,7 @@ slapd_version() {
 
 	if [ "${VERSION}" = "" ] ; then
 		if [ ! -z ${SLAPD_BIN+x} ] && [ "${SLAPD_BIN}" != "" ] ; then
-			VERSION="$( ${SLAPD_BIN} -V 2>&1 | grep 'OpenLDAP' )"
+			VERSION="$( ${SLAPD_BIN} -VV 2>&1 | grep 'OpenLDAP' )"
 		fi
 	fi
 	VERSION=$( printf "%s" "${VERSION}" | sed -e 's/^.*\(slapd .*(.*)\).*$/\1/' )
