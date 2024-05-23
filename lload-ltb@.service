@@ -1,0 +1,13 @@
+[Unit]
+Description=OpenLDAP LTB OpenLDAP load-balancer startup script for specific instance %I
+Documentation=https://ltb-project.org/documentation
+After=syslog.target network.target
+
+[Service]
+Type=forking
+PIDFile=/usr/local/openldap/var/run/lload-%i.pid
+ExecStart=/usr/local/openldap/sbin/slapd-%i-cli lloadstart
+ExecStop=/usr/local/openldap/sbin/slapd-%i-cli lloadstop
+
+[Install]
+WantedBy=multi-user.target
