@@ -349,8 +349,10 @@ display_usage() {
 	printf "%s\n" "  - ${bold}reindex${normal}: index or reindex database"
 	printf "%s\n" "  - ${bold}backup${normal}: backup the data"
 	printf "%s\n" "  - ${bold}restore${normal}: restore the data"
+	printf "%s\n" "  - ${bold}hotrestore${normal}: restore the data without stopping / starting slapd (use with caution)"
 	printf "%s\n" "  - ${bold}backupconfig${normal}: backup the configuration"
 	printf "%s\n" "  - ${bold}restoreconfig${normal}: restore the configuration"
+	printf "%s\n" "  - ${bold}hotrestoreconfig${normal}: restore the configuration without stopping / starting slapd (use with caution)"
 	printf "%s\n" "  - ${bold}checksync${normal}: check the synchronization state of the current instance to every provider found in configuration"
 	printf "%s\n" "  - ${bold}importflatconfigtemplate${normal}: import the flat template configuration file, after setting the variables"
 	printf "%s\n" "  - ${bold}importldifconfigtemplate${normal}: import the ldif template configuration file, after setting the variables"
@@ -2193,6 +2195,10 @@ case $1 in
 		start_slapd
 		;;
 
+	hotrestore)
+		restore
+		;;
+
 	backupconfig)
 		backupconfig
 		removeoldconfigbackups
@@ -2203,6 +2209,11 @@ case $1 in
 		restoreconfig
 		configtest
 		start_slapd
+		;;
+
+	hotrestoreconfig)
+		restoreconfig
+		configtest
 		;;
 
 	checksync)
