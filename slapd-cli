@@ -56,6 +56,9 @@ PPORT="8389"
 PSSLPORT="8636"
 LDAPI_SOCKETDIR=""
 LDAPI_SOCKETURL=""
+LDAPI_SOCKETMODE=""
+LDAPI_SOCKETUSER=""
+LDAPI_SOCKETGROUP=""
 
 # OpenLDAP directory and files
 SLAPD_PATH="/usr/local/openldap"
@@ -435,6 +438,22 @@ start_slapd() {
 			$SLAPD_BIN -h "$SLAPD_SERVICES" $SLAPD_PARAMS
 		fi
 		sleep 1
+
+		# Change socket mode if requested
+		if [ -n "$LDAPI_SOCKETMODE" ]; then
+			chmod -R $LDAPI_SOCKETMODE $LDAPI_SOCKETDIR
+			message "info" "[INFO] Mode changed for LDAPI socket $LDAPI_SOCKETDIR to $LDAPI_SOCKETMODE"
+		fi
+		# Change socket user if requested
+		if [ -n "$LDAPI_SOCKETUSER" ]; then
+			chown -R "$LDAPI_SOCKETUSER" "$LDAPI_SOCKETDIR"
+			message "info" "[INFO] User changed for LDAPI socket $LDAPI_SOCKETDIR to $LDAPI_SOCKETUSER"
+		fi
+		# Change socket group if requested
+		if [ -n "$LDAPI_SOCKETGROUP" ]; then
+			chgrp -R "$LDAPI_SOCKETGROUP" "$LDAPI_SOCKETDIR"
+			message "info" "[INFO] Group changed for LDAPI socket $LDAPI_SOCKETDIR to $LDAPI_SOCKETGROUP"
+		fi
 
 		# Presence of PID file
 		if [ ! -r $SLAPD_PID_FILE ]
