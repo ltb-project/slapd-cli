@@ -286,6 +286,8 @@ olcDbIndex: sn pres,eq,sub
 olcDbMaxReaders: 0
 olcDbMaxSize: 4294967296
 olcDbMode: 0600
+olcDbMultival: member 1000,100
+olcDbMultival: uniqueMember 1000,100
 olcDbSearchStack: 16
 olcDbMaxEntrySize: 0
 olcDbRtxnSize: 10000
