@@ -1286,7 +1286,8 @@ get_provider_config() {
 			fi
 			if printf %s "$LINE" | grep -q -P '^olcSyncrepl:[ \t]+' ; then
 				# add detected provider to the list of detected providers for this suffix (\n separated)
-				PROVIDER[${SUF}]="${PROVIDER[$SUF]}\n$( printf %s "${LINE}" | sed -e 's/olcSyncrepl:[ \t]\+{*[0-9]*}*//' )"
+				PROVIDER[${SUF}]="${PROVIDER[$SUF]}
+$( printf %s "${LINE}" | sed -e 's/olcSyncrepl:[ \t]\+{*[0-9]*}*//' )"
 				# remove starting \n
 				PROVIDER[${SUF}]="$( printf %s "${PROVIDER[${SUF}]}" | sed -e ':a;N;$!ba;s/^\n//g' )"
 			fi
@@ -1316,15 +1317,16 @@ get_provider_config() {
 			fi
 			if printf %s "$LINE" | grep -q -P '^syncrepl[ \t]+' ; then
 				# add detected provider to the list of detected providers for this suffix (\n separated)
-				PROVIDER[${SUF}]="${PROVIDER[$SUF]}\n$( printf %s "${LINE}" | sed -e 's/syncrepl[ \t]\+//' )"
+				PROVIDER[${SUF}]="${PROVIDER[$SUF]}
+$( printf %s "${LINE}" | sed -e 's/syncrepl[ \t]\+//' )"
 				# remove starting \n
 				PROVIDER[${SUF}]="$( printf %s "${PROVIDER[${SUF}]}" | sed -e ':a;N;$!ba;s/^\n//g' )"
 			fi
 		done <<< "${DUMP}"
 	fi
 	for key in "${!PROVIDER[@]}"; do
-		printf %s "Suffix: ${key}\n"
-		printf %s "detected providers:\n${PROVIDER[$key]}\n\n"
+		printf "Suffix: %s\n" "${key}"
+		printf "detected providers:\n%s\n\n" "${PROVIDER[$key]}"
 	done
 }
 
