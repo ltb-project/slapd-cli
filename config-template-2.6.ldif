@@ -20,6 +20,7 @@ olcIndexIntLen: 4
 olcListenerThreads: 1
 olcLocalSSF: 71
 olcLogFile: CONFIG_LOGFILE
+olcLogFileFormat: syslog-localtime
 olcLogFileOnly: TRUE
 olcLogFileRotate: 30 1024 24
 olcLogLevel: CONFIG_LOGLEVEL
