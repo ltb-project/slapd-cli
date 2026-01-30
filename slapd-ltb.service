@@ -1,7 +1,7 @@
 [Unit]
 Description=OpenLDAP LTB startup script
 Documentation=https://ltb-project.org/documentation
-After=syslog.target network.target
+After=syslog.target network-online.target
 
 [Service]
 Type=forking
