@@ -196,9 +196,9 @@ backconfig_get_values() {
 	fi
 	if [ -z "$SU" ]
 	then
-		list=$( $slapcat_cmd | grep "^$1:" | sed "s/$1: //" | sed "s/ /#20/g" )
+		list=$( $slapcat_cmd 2>/dev/null | grep "^$1:" | sed "s/$1: //" | sed "s/ /#20/g" )
 	else
-		list=$( $SU "$slapcat_cmd" | grep "^$1:" | sed "s/$1: //" | sed "s/ /#20/g" )
+		list=$( $SU "$slapcat_cmd" 2>/dev/null | grep "^$1:" | sed "s/$1: //" | sed "s/ /#20/g" )
 	fi
 
 	if [ -n "$list" ]; then
@@ -1011,10 +1011,10 @@ backup() {
 			# slapcat
 			if [ -z "$SU" ]
 			then
-				$UMASK $MASK && $SLAPCAT_BIN -b "$sufprint" $SLAPCAT_PARAMS -l "$file"
+				$UMASK $MASK && $SLAPCAT_BIN -b "$sufprint" $SLAPCAT_PARAMS -l "$file" 2>/dev/null
 				ret=$?
 			else
-				$SU "$UMASK $MASK && $SLAPCAT_BIN -b \"$sufprint\" $SLAPCAT_PARAMS > \"$file\""
+				$SU "$UMASK $MASK && $SLAPCAT_BIN -b \"$sufprint\" $SLAPCAT_PARAMS > \"$file\" 2>/dev/null"
 				ret=$?
 			fi
 
@@ -1068,10 +1068,10 @@ backupconfig() {
 		# slapcat
 		if [ -z "$SU" ]
 		then
-			$UMASK $MASK && $SLAPCAT_BIN $SLAPCAT_PARAMS -n0 -F $SLAPD_CONF_DIR -l "$file"
+			$UMASK $MASK && $SLAPCAT_BIN $SLAPCAT_PARAMS -n0 -F $SLAPD_CONF_DIR -l "$file" 2>/dev/null
 			ret=$?
 		else
-			$SU "$UMASK $MASK && $SLAPCAT_BIN $SLAPCAT_PARAMS -n0 -F $SLAPD_CONF_DIR > \"$file\""
+			$SU "$UMASK $MASK && $SLAPCAT_BIN $SLAPCAT_PARAMS -n0 -F $SLAPD_CONF_DIR > \"$file\" 2>/dev/null"
 			ret=$?
 		fi
 
@@ -1175,9 +1175,9 @@ restore() {
 				# Import backup
 				if [ -z "$SU" ]
 				then
-					$SLAPADD_BIN -b "$sufprint" $SLAPADD_PARAMS
+					$SLAPADD_BIN -b "$sufprint" $SLAPADD_PARAMS 2>/dev/null
 				else
-					$SU "$SLAPADD_BIN -b \"$sufprint\" $SLAPADD_PARAMS"
+					$SU "$SLAPADD_BIN -b \"$sufprint\" $SLAPADD_PARAMS 2>/dev/null"
 				fi
 
 				# alert
@@ -1237,9 +1237,9 @@ restoreconfig() {
 			# Import backup
 			if [ -z "$SU" ]
 			then
-				$SLAPADD_BIN -n0 -F $SLAPD_CONF_DIR -l $file
+				$SLAPADD_BIN -n0 -F $SLAPD_CONF_DIR -l $file 2>/dev/null
 			else
-				$SU "$SLAPADD_BIN -n0 -F $SLAPD_CONF_DIR -l $file"
+				$SU "$SLAPADD_BIN -n0 -F $SLAPD_CONF_DIR -l $file 2>/dev/null"
 			fi
 		fi
 
@@ -1270,7 +1270,7 @@ get_provider_config() {
 	if [ "$SLAPD_CONF_DIR" ]
 	then
 		# get all file in a DUMP variable
-		DUMP="$( $SLAPCAT_BIN -n0 -F "$SLAPD_CONF_DIR" -o ldif-wrap=no )"
+		DUMP="$( $SLAPCAT_BIN -n0 -F "$SLAPD_CONF_DIR" -o ldif-wrap=no 2>/dev/null )"
 		# parse DUMP variable for getting providers
 		SUF=""
 		while read -r LINE
@@ -1664,9 +1664,9 @@ import_ldif_config_template() {
 	SLAPADD_PARAMS="$SLAPADD_PARAMS -n0 -F $SLAPD_CONF_DIR -l ${CONFIG_FILE_PATH}"
 	if [ -z "$SU" ]
 	then
-		$SLAPADD_BIN $SLAPADD_PARAMS
+		$SLAPADD_BIN $SLAPADD_PARAMS 2>/dev/null
 	else
-		$SU "$SLAPADD_BIN $SLAPADD_PARAMS"
+		$SU "$SLAPADD_BIN $SLAPADD_PARAMS" 2>/dev/null
 	fi
 	rm "${CONFIG_FILE_PATH}"
 
@@ -1706,7 +1706,7 @@ convert_config() {
 	fi
 
 	# export configuration in ldif
-	$SLAPCAT_BIN $SLAPCAT_PARAMS -n0 -F ${TMP_CONF_DIR} -l "$2"
+	$SLAPCAT_BIN $SLAPCAT_PARAMS -n0 -F ${TMP_CONF_DIR} -l "$2" 2>/dev/null
 	if [ $? -ne 0 ] ; then
 		message "alert" "[ALERT] conversion failed during export"
 		rm -rf "${TMP_CONF_DIR}"
@@ -2076,9 +2076,9 @@ userPassword: ${DATA_USER_PW_HASH}" >> ${DATA_FILE_PATH}
 	message "info" "[INFO] Importing data from ${DATA_FILE_PATH}"
 	if [ -z "$SU" ]
 	then
-		$SLAPADD_BIN -b "$sufp" $SLAPADD_PARAMS
+		$SLAPADD_BIN -b "$sufp" $SLAPADD_PARAMS 2>/dev/null
 	else
-		$SU "$SLAPADD_BIN -b \"$sufp\" $SLAPADD_PARAMS"
+		$SU "$SLAPADD_BIN -b \"$sufp\" $SLAPADD_PARAMS" 2>/dev/null
 	fi
 
 	# alert
