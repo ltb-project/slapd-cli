@@ -456,15 +456,18 @@ start_slapd() {
 		fi
 
 		# Presence of PID file
-		if [ ! -r $SLAPD_PID_FILE ]
+		if [ -n "$SLAPD_PID_FILE" ] && [ ! -r "$SLAPD_PID_FILE" ]
 		then
 			message "alert" "[ALERT] No PID file for OpenLDAP"
 			exit 1
 		fi
 
 		# Is slapd launched?
-		PID=`cat $SLAPD_PID_FILE`
-		if [ ! -e /proc/$PID ]
+		[ -n "$SLAPD_PID_FILE" ] && PID=$(cat "$SLAPD_PID_FILE")
+		if [ -z "$PID" ] && [ $_use_systemctl -eq 1 ]; then
+			PID=$(systemctl show --property MainPID --value "$SYSTEMD_SERVICE_NAME")
+		fi
+		if [ -n "$PID" ] && [ ! -e "/proc/$PID" ]
 		then
 			message "alert" "[ALERT] OpenLDAP not running"
 			exit 1
@@ -479,7 +482,7 @@ stop_slapd() {
 	message "info" "[INFO] Halting OpenLDAP..."
 
 	# Presence of PID file
-	if [ ! -r $SLAPD_PID_FILE ]
+	if [ -n "$SLAPD_PID_FILE" ] && [ ! -r "$SLAPD_PID_FILE" ]
 	then
 		message "info" "[INFO] Can't read PID file, to stop OpenLDAP try: $0 forcestop"
 		return 1
@@ -731,7 +734,7 @@ forcestop() {
 	message "info" "[INFO] Killing OpenLDAP with force..."
 
 	# Presence of PID file
-	if [ ! -r $SLAPD_PID_FILE ]
+	if [ -n "$SLAPD_PID_FILE" ] && [ ! -r "$SLAPD_PID_FILE" ]
 	then
 		# Escape special characters into $SLAPD_SERVICES
 		slapd_services="`echo "$SLAPD_SERVICES" | sed 's/\*/\\\*/g'`"
@@ -753,7 +756,10 @@ forcestop() {
 			fi
 		fi
 	else
-		PID=`cat $SLAPD_PID_FILE`
+		[ -n "$SLAPD_PID_FILE" ] && PID=$(cat "$SLAPD_PID_FILE")
+		if [ -z "$PID" ] && [ $_use_systemctl -eq 1 ]; then
+			PID=$(systemctl show --property MainPID --value "$SYSTEMD_SERVICE_NAME")
+		fi
 		if [ $( ${PS_COMMAND_PID} | grep "${PID}" | wc -l ) -eq 0 ] ; then
 			message "info" "[OK] OpenLDAP already stopped"
 			exit 0
@@ -782,7 +788,7 @@ slapd_status() {
 	fi
 
 	# Return 0 if slapd is running, 1 if slapd is stopped, 2 if we can't say
-	if [ ! -r $SLAPD_PID_FILE ]
+	if [ -n "$SLAPD_PID_FILE" ] && [ ! -r "$SLAPD_PID_FILE" ]
 	then
 		# Escape special characters into $SLAPD_SERVICES
 		slapd_services="`echo "$SLAPD_SERVICES" | sed 's/\*/\\\*/g'`"
@@ -795,7 +801,7 @@ slapd_status() {
 			return 2
 		fi
 	else
-		PID=`cat $SLAPD_PID_FILE`
+		[ -n "$SLAPD_PID_FILE" ] && PID=$(cat "$SLAPD_PID_FILE")
 	fi
 
 	if [ ! -e /proc/$PID ]
@@ -841,8 +847,10 @@ display_status() {
 
 	if [ $status -eq 0 ]
 	then
-		PID=`cat $SLAPD_PID_FILE`
-
+		[ -n "$SLAPD_PID_FILE" ] && PID=$(cat "$SLAPD_PID_FILE")
+		if [ -z $PID ] && [ $_use_systemctl -eq 1 ]; then
+			PID=$(systemctl show --property MainPID --value "$SYSTEMD_SERVICE_NAME")
+		fi
 		message "info" "[INFO] Process OpenLDAP is running (PID $PID)"
 		VER="$( slapd_version )"
 		if [ "${VER}" != "" ] ; then
