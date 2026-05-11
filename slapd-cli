@@ -38,7 +38,7 @@ VERSION="3.7"
 #====================================================================
 # CLI configuration file, for overloading every variable below
 #====================================================================
-PROG_NAME=`basename $0 | sed 's/^[KS][0-9][0-9]//'` # For nice messages
+PROG_NAME=$(basename "$0" | sed 's/^[KS][0-9][0-9]//') # For nice messages
 CLI_CONF_FILE=/usr/local/openldap/etc/openldap/${PROG_NAME}.conf
 
 
@@ -89,7 +89,7 @@ CONVERT_CONF_AT_STARTUP=""
 # Backup
 BACKUP_AT_SHUTDOWN="1"
 BACKUP_PATH="/tmp/openldap"
-BACKUP_SUFFIX="`date +%Y%m%d%H%M%S`.ldif"
+BACKUP_SUFFIX="$(date +%Y%m%d%H%M%S).ldif"
 BACKUP_COMPRESS_EXT="" # gz, bz2, ...
 BACKUP_COMPRESS_BIN="" # /bin/gzip, /bin/bzip2, ...
 BACKUP_UNCOMPRESS_BIN="" # /bin/gunzip, /bin/bunzip2, ...
@@ -106,9 +106,8 @@ SYSTEMD_SERVICE_NAME=slapd-ltb
 SYSTEMD_LLOAD_SERVICE_NAME=lload-ltb
 
 SLAPD_VERSION="2.5" # OpenLDAP version: major.minor (don't include .patch)
-OS=`uname -s`   # To adapt message printing
-MYUID=`id -u`     # For UNIX compatibility => modify this command
-MYGID=`id -g`     # For UNIX compatibility => modify this command
+MYUID=$(id -u)      # For UNIX compatibility => modify this command
+MYGID=$(id -g)      # For UNIX compatibility => modify this command
 declare -A PROVIDER
 TOLERANCE_CSN=1000000 # 1s of tolerance when comparing contextCSN
 
@@ -123,7 +122,7 @@ message() {
 	# $2: message
 
 	# Log to syslog
-	logger -p "$SLAPD_SYSLOG_LOCAL_USER.$1" -t $PROG_NAME -i "$2"
+	logger -p "$SLAPD_SYSLOG_LOCAL_USER.$1" -t "$PROG_NAME" -i "$2"
 
 	# Output to console
 	if [ "$1" = "alert" ]
@@ -156,7 +155,7 @@ get_confvalues() {
 	;;
 	esac
 	else
-		conffile_get_values $1
+		conffile_get_values "$1"
 	fi
 }
 
@@ -164,7 +163,7 @@ conffile_get_values() {
 	# $1: parameter in slapd.conf
 	# $RETVAL: list of values
 
-	list=`sed "s/\r//" $SLAPD_CONF | grep "^$1[[:space:]]" | grep -v '^#' | sed "s/$1[[:space:]]*//" | sed "s/ /#20/g"| sed -e 's/"//g'`
+	list=$(sed "s/\r//" $SLAPD_CONF | grep "^$1[[:space:]]" | grep -v '^#' | sed "s/$1[[:space:]]*//" | sed "s/ /#20/g"| sed -e 's/"//g')
 
 	if [ "$list" ]; then
 		RETVAL="$list"
@@ -178,7 +177,7 @@ backconfig_get_values() {
 	# $2: LDAP filter (optional)
 	# $RETVAL: list of returned values
 
-	if [ -z "$SLAPD_CONF_DIR" -o ! -d "$SLAPD_CONF_DIR" ]
+	if [ -z "$SLAPD_CONF_DIR" ] || [ ! -d "$SLAPD_CONF_DIR" ]
 	then
 		message "alert" "[ALERT] Could not parse configuration directory"
 		RETVAL=""
@@ -217,11 +216,11 @@ syncrepl_get_value() {
 	parameter=$2
 
 	# Check if parameter value is surrounded with quotes
-	echo "$syncrepl" | grep -e $parameter'="' > /dev/null
+	echo "$syncrepl" | grep -e "$parameter"'="' > /dev/null
 	noquotes=$?
 
 	# Check if parameter value is present in the syncrepl value
-	echo "$syncrepl" | grep -e $parameter > /dev/null
+	echo "$syncrepl" | grep -e "$parameter" > /dev/null
 	noparam=$?
 
 	if [ $noparam -gt 0 ]
@@ -229,18 +228,19 @@ syncrepl_get_value() {
 		RETVAL=""
 	elif [ $noquotes -gt 0 ]
 	then
-		RETVAL=$( echo "$syncrepl" | sed -e 's/.*'$parameter'[ \t]*=[ \t]*\([^ \t]\+\).*$/\1/' | sed -e 's/["]//g' | sed -e "s/[']//g")
+		RETVAL=$( echo "$syncrepl" | sed -e 's/.*'"$parameter"'[ \t]*=[ \t]*\([^ \t]\+\).*$/\1/' | sed -e 's/["]//g' | sed -e "s/[']//g")
 	else
-		RETVAL=$( echo "$syncrepl" | sed -e 's/.*'$parameter'[ \t]*=[ \t]*"\([^"\t]\+\)".*$/\1/' | sed -e 's/["]//g' | sed -e "s/[']//g");
+		RETVAL=$( echo "$syncrepl" | sed -e 's/.*'"$parameter"'[ \t]*=[ \t]*"\([^"\t]\+\)".*$/\1/' | sed -e 's/["]//g' | sed -e "s/[']//g");
 	fi
 }
 
 #====================================================================
 # Load specific parameters
 #====================================================================
-if [ -f ${CLI_CONF_FILE} ]
+if [ -f "${CLI_CONF_FILE}" ]
 then
-	. ${CLI_CONF_FILE}
+	# shellcheck source=slapd-cli.conf
+	. "${CLI_CONF_FILE}"
 	message "info" "[INFO] Using ${CLI_CONF_FILE} for configuration"
 else
 	message "info" "[INFO] Using built-in configuration - this may cause some problems"
@@ -275,7 +275,7 @@ fi
 #====================================================================
 # Initiate 'su' command
 #====================================================================
-if [ "$SLAPD_USER" -a $MYUID -eq 0 ]
+if [ "$SLAPD_USER" ] && [ "$MYUID" -eq 0 ]
 then
 	SU="su -s /bin/bash - $SLAPD_USER -c "
 fi
@@ -285,7 +285,7 @@ fi
 #====================================================================
 
 # Make sure the pidfile directory exists with correct permissions
-piddir=`dirname "$SLAPD_PID_FILE"`
+piddir=$(dirname "$SLAPD_PID_FILE")
 if [ ! -d "$piddir" ]; then
 	mkdir -p "$piddir"
 	[ -z "$SLAPD_USER" ] || chown -R "$SLAPD_USER" "$piddir"
@@ -303,28 +303,28 @@ do
 done
 
 # Rights to read configuration
-if [ "$SLAPD_CONF" -a ! -r "$SLAPD_CONF" ]
+if [ "$SLAPD_CONF" ] && [ ! -r "$SLAPD_CONF" ]
 then
 	message "alert" "[ALERT] Can't read $SLAPD_CONF"
 	exit 1
 fi
 
 # Is there a configuration directory ?
-if [ "$SLAPD_CONF_DIR" -a ! -w "$SLAPD_CONF_DIR" ]
+if [ "$SLAPD_CONF_DIR" ] && [ ! -w "$SLAPD_CONF_DIR" ]
 then
 	message "alert" "[ALERT] Can't write to configuration directory $SLAPD_CONF_DIR"
 	exit 1
 fi
 
 # Are you root (for port < 1024)?
-if [ $PORT -lt 1024 -a $MYUID -ne 0 ]
+if [ $PORT -lt 1024 ] && [ "$MYUID" -ne 0 ]
 then
 	message "alert" "[ALERT] Only root can launch OpenLDAP on port $PORT"
 	exit 1
 fi
 
 # Create LDAPI socket
-if [ "$LDAPI_SOCKETDIR" -a ! -r "$LDAPI_SOCKETDIR" ]
+if [ "$LDAPI_SOCKETDIR" ] && [ ! -r "$LDAPI_SOCKETDIR" ]
 then
 	message "info" "[INFO] Create LDAPI socket dir $LDAPI_SOCKETDIR"
 	mkdir -p "$LDAPI_SOCKETDIR"
@@ -377,9 +377,7 @@ start_slapd() {
 
 	# Exit 0 if slapd is already running
 	# LSB compliance
-	slapd_status
-
-	if [ $? -eq 0 ]
+	if slapd_status
 	then
 		message "info" "[OK] OpenLDAP is already running"
 		exit 0
@@ -389,10 +387,9 @@ start_slapd() {
 	message "info" "[INFO] Launching OpenLDAP..."
 
 	# File descriptor limit, only for root
-	if [ $MYUID -eq 0 ]
+	if [ "$MYUID" -eq 0 ]
 	then
-		ulimit -n $FD_LIMIT
-		if [ $? -eq 0 ]
+		if ulimit -n $FD_LIMIT
 		then
 			message "info" "[OK] File descriptor limit set to $FD_LIMIT"
 		else
@@ -411,12 +408,12 @@ start_slapd() {
 		SLAPD_PARAMS="$SLAPD_PARAMS -f $SLAPD_CONF"
 	fi
 
-	if [  "$SLAPD_USER" -a $MYUID -eq 0 ]
+	if [  "$SLAPD_USER" ] && [ "$MYUID" -eq 0 ]
 	then
 		SLAPD_PARAMS="$SLAPD_PARAMS -u $SLAPD_USER"
 	fi
 
-	if [ "$SLAPD_GROUP" -a $MYGID -eq 0 ]
+	if [ "$SLAPD_GROUP" ] && [ "$MYGID" -eq 0 ]
 	then
 		SLAPD_PARAMS="$SLAPD_PARAMS -g $SLAPD_GROUP"
 	fi
@@ -430,18 +427,18 @@ start_slapd() {
 
 	if [ -n "$1" ]; then
 
-		$SLAPD_BIN -h "$SLAPD_SERVICES" $SLAPD_PARAMS -d $1
+		$SLAPD_BIN -h "$SLAPD_SERVICES" "$SLAPD_PARAMS" -d "$1"
 	else
 		if [ $_use_systemctl -eq 1 ] ; then
 			systemctl start "$SYSTEMD_SERVICE_NAME"
 		else
-			$SLAPD_BIN -h "$SLAPD_SERVICES" $SLAPD_PARAMS
+			$SLAPD_BIN -h "$SLAPD_SERVICES" "$SLAPD_PARAMS"
 		fi
 		sleep 1
 
 		# Change socket mode if requested
 		if [ -n "$LDAPI_SOCKETMODE" ]; then
-			chmod -R $LDAPI_SOCKETMODE $LDAPI_SOCKETDIR
+			chmod -R "$LDAPI_SOCKETMODE" "$LDAPI_SOCKETDIR"
 			message "info" "[INFO] Mode changed for LDAPI socket $LDAPI_SOCKETDIR to $LDAPI_SOCKETMODE"
 		fi
 		# Change socket user if requested
@@ -463,8 +460,8 @@ start_slapd() {
 		fi
 
 		# Is slapd launched?
-		PID=`cat $SLAPD_PID_FILE`
-		if [ ! -e /proc/$PID ]
+		PID=$(cat $SLAPD_PID_FILE)
+		if [ ! -e /proc/"$PID" ]
 		then
 			message "alert" "[ALERT] OpenLDAP not running"
 			exit 1
@@ -488,23 +485,23 @@ stop_slapd() {
 			systemctl stop "$SYSTEMD_SERVICE_NAME"
 			message "info" "[OK] OpenLDAP stopped"
 		else
-			PID=`cat $SLAPD_PID_FILE`
-			if [ $( ${PS_COMMAND_PID} | grep "${PID}" | wc -l ) -eq 0 ] ; then
+			PID=$(cat $SLAPD_PID_FILE)
+			if [ "$( ${PS_COMMAND_PID} | grep -c "${PID}" )" -eq 0 ] ; then
 				message "info" "[OK] OpenLDAP already stopped"
 				exit 0
 			fi
-			kill -INT $PID
+			kill -INT "$PID"
 			# Waiting loop
 			i=0
-			while [ -e /proc/$PID ]
+			while [ -e /proc/"$PID" ]
 			do
-				if [ $i -eq $TIMEOUT ]
+				if [ "$i" -eq $TIMEOUT ]
 				then
 					# Timeout
 					message "alert" "[ALERT] OpenLDAP still running (PID $PID), try: $0 forcestop"
 					exit 1
 				fi
-				i=`expr $i + 1`
+				i=$(( i + 1 ))
 				sleep 1
 			done
 
@@ -528,9 +525,7 @@ start_lload() {
 
 	# Exit 0 if lload is already running
 	# LSB compliance
-	lload_status
-
-	if [ $? -eq 0 ]
+	if lload_status
 	then
 		message "info" "[OK] lload is already running"
 		exit 0
@@ -540,10 +535,9 @@ start_lload() {
 	message "info" "[INFO] Launching OpenLDAP..."
 
 	# File descriptor limit, only for root
-	if [ $MYUID -eq 0 ]
+	if [ "$MYUID" -eq 0 ]
 	then
-		ulimit -n $FD_LIMIT
-		if [ $? -eq 0 ]
+		if ulimit -n $FD_LIMIT
 		then
 			message "info" "[OK] File descriptor limit set to $FD_LIMIT"
 		else
@@ -562,12 +556,12 @@ start_lload() {
 		LLOAD_PARAMS="$LLOAD_PARAMS -f $LLOAD_CONF"
 	fi
 
-	if [  "$SLAPD_USER" -a $MYUID -eq 0 ]
+	if [ "$SLAPD_USER" ] && [ "$MYUID" -eq 0 ]
 	then
 		LLOAD_PARAMS="$LLOAD_PARAMS -u $SLAPD_USER"
 	fi
 
-	if [ "$SLAPD_GROUP" -a $MYGID -eq 0 ]
+	if [ "$SLAPD_GROUP" ] && [ "$MYGID" -eq 0 ]
 	then
 		LLOAD_PARAMS="$LLOAD_PARAMS -g $SLAPD_GROUP"
 	fi
@@ -580,25 +574,25 @@ start_lload() {
 	# It's time to start lload
 
 	if [ -n "$1" ]; then
-		$SLAPD_BIN -h "$LLOAD_SERVICES" $LLOAD_PARAMS -d $1
+		$SLAPD_BIN -h "$LLOAD_SERVICES" "$LLOAD_PARAMS" -d "$1"
 	else
 		if [ $_use_systemctl -eq 1 ] ; then
 			systemctl start "$SYSTEMD_LLOAD_SERVICE_NAME"
 		else
-			$SLAPD_BIN -h "$LLOAD_SERVICES" $LLOAD_PARAMS
+			$SLAPD_BIN -h "$LLOAD_SERVICES" "$LLOAD_PARAMS"
 		fi
 		sleep 1
 
 		# Presence of PID file
-		if [ ! -r $LLOAD_PID_FILE ]
+		if [ ! -r "$LLOAD_PID_FILE" ]
 		then
 			message "alert" "[ALERT] No PID file for lload"
 			exit 1
 		fi
 
 		# Is lload launched?
-		PID=`cat $LLOAD_PID_FILE`
-		if [ ! -e /proc/$PID ]
+		PID=$(cat "$LLOAD_PID_FILE")
+		if [ ! -e /proc/"$PID" ]
 		then
 			message "alert" "[ALERT] lload not running"
 			exit 1
@@ -613,7 +607,7 @@ stop_lload() {
 	message "info" "[INFO] Halting lload..."
 
 	# Presence of PID file
-	if [ ! -r $LLOAD_PID_FILE ]
+	if [ ! -r "$LLOAD_PID_FILE" ]
 	then
 		message "info" "[INFO] Can't read PID file, try to stop lload manually"
 		return 1
@@ -622,23 +616,23 @@ stop_lload() {
 			systemctl stop "$SYSTEMD_LLOAD_SERVICE_NAME"
 			message "info" "[OK] lload stopped"
 		else
-			PID=`cat $LLOAD_PID_FILE`
-			if [ $( ${PS_COMMAND_PID} | grep "${PID}" | wc -l ) -eq 0 ] ; then
+			PID=$(cat "$LLOAD_PID_FILE")
+			if [ "$( ${PS_COMMAND_PID} | grep -c "${PID}" )" -eq 0 ] ; then
 				message "info" "[OK] lload already stopped"
 				exit 0
 			fi
-			kill -INT $PID
+			kill -INT "$PID"
 			# Waiting loop
 			i=0
-			while [ -e /proc/$PID ]
+			while [ -e /proc/"$PID" ]
 			do
-				if [ $i -eq $TIMEOUT ]
+				if [ "$i" -eq $TIMEOUT ]
 				then
 					# Timeout
 					message "alert" "[ALERT] lload still running (PID $PID), try to stop lload manually"
 					exit 1
 				fi
-				i=`expr $i + 1`
+				i=$(( i + 1 ))
 				sleep 1
 			done
 
@@ -660,23 +654,23 @@ lload_status() {
 	fi
 
 	# Return 0 if lload is running, 1 if slapd is stopped, 2 if we can't say
-	if [ ! -r $LLOAD_PID_FILE ]
+	if [ ! -r "$LLOAD_PID_FILE" ]
 	then
 		# Escape special characters into $LLOAD_SERVICES
-		lload_services="`echo "$LLOAD_SERVICES" | sed 's/\*/\\\*/g'`"
+		lload_services="$(echo "$LLOAD_SERVICES" | sed 's/\*/\\\*/g')"
 
 		# Check if any slapd process are running
-		if [ `${PS_COMMAND_CMD} | grep $SLAPD_BIN | grep "$lload_services" | grep -v grep | wc -l` -eq 0 ]
+		if [ "$(${PS_COMMAND_CMD} | grep $SLAPD_BIN | grep "$lload_services" | grep -c -v grep)" -eq 0 ]
 		then
 			return 1
 		else
 			return 2
 		fi
 	else
-		PID=`cat $LLOAD_PID_FILE`
+		PID=$(cat "$LLOAD_PID_FILE")
 	fi
 
-	if [ ! -e /proc/$PID ]
+	if [ ! -e /proc/"$PID" ]
 	then
 		return 1
 	else
@@ -696,7 +690,7 @@ display_lload_status() {
 
 	if [ $status -eq 0 ]
 	then
-		PID=`cat $LLOAD_PID_FILE`
+		PID=$(cat "$LLOAD_PID_FILE")
 
 		message "info" "[INFO] Process lload is running (PID $PID)"
 		VER="$( slapd_version )"
@@ -705,8 +699,8 @@ display_lload_status() {
 		fi
 		message "info" "[INFO] Listening to services $LLOAD_SERVICES"
 
-		CPU=`ps -p $PID -o %cpu=`
-		MEM=`ps -p $PID -o %mem=`
+		CPU=$(ps -p "$PID" -o %cpu=)
+		MEM=$(ps -p "$PID" -o %mem=)
 
 		message "info" "[INFO] lload process usage: $CPU% CPU / $MEM% MEM"
 
@@ -734,17 +728,15 @@ forcestop() {
 	if [ ! -r $SLAPD_PID_FILE ]
 	then
 		# Escape special characters into $SLAPD_SERVICES
-		slapd_services="`echo "$SLAPD_SERVICES" | sed 's/\*/\\\*/g'`"
+		slapd_services="$(echo "$SLAPD_SERVICES" | sed 's/\*/\\\*/g')"
 
 		# Check if any slapd process are running
-		if [ `${PS_COMMAND_CMD} | grep $SLAPD_BIN | grep "$slapd_services" | grep -v grep | wc -l` -eq 0 ]
+		if [ "$(${PS_COMMAND_CMD} | grep $SLAPD_BIN | grep "$slapd_services" | grep -c -v grep)" -eq 0 ]
 		then
 			message "info" "[INFO] Found no OpenLDAP process running with $SLAPD_SERVICES"
 		else
 			# Try a killall
-			/usr/bin/killall -KILL $SLAPD_BIN
-
-			if [ $? -eq 0 ]
+			if /usr/bin/killall -KILL $SLAPD_BIN
 			then
 				message "info" "[OK] All OpenLDAP process killed with force"
 			else
@@ -753,14 +745,12 @@ forcestop() {
 			fi
 		fi
 	else
-		PID=`cat $SLAPD_PID_FILE`
-		if [ $( ${PS_COMMAND_PID} | grep "${PID}" | wc -l ) -eq 0 ] ; then
+		PID=$(cat $SLAPD_PID_FILE)
+		if [ "$( ${PS_COMMAND_PID} | grep -c "${PID}" )" -eq 0 ] ; then
 			message "info" "[OK] OpenLDAP already stopped"
 			exit 0
 		fi
-		kill -KILL $PID
-
-		if [ $? -eq 0 ]
+		if kill -KILL "$PID"
 		then
 			message "info" "[OK] OpenLDAP process killed with force (PID $PID)"
 		else
@@ -785,20 +775,20 @@ slapd_status() {
 	if [ ! -r $SLAPD_PID_FILE ]
 	then
 		# Escape special characters into $SLAPD_SERVICES
-		slapd_services="`echo "$SLAPD_SERVICES" | sed 's/\*/\\\*/g'`"
+		slapd_services="$(echo "$SLAPD_SERVICES" | sed 's/\*/\\\*/g')"
 
 		# Check if any slapd process are running
-		if [ `${PS_COMMAND_CMD} | grep $SLAPD_BIN | grep "$slapd_services" | grep -v grep | wc -l` -eq 0 ]
+		if [ "$(${PS_COMMAND_CMD} | grep $SLAPD_BIN | grep "$slapd_services" | grep -c -v grep)" -eq 0 ]
 		then
 			return 1
 		else
 			return 2
 		fi
 	else
-		PID=`cat $SLAPD_PID_FILE`
+		PID=$(cat $SLAPD_PID_FILE)
 	fi
 
-	if [ ! -e /proc/$PID ]
+	if [ ! -e /proc/"$PID" ]
 	then
 		return 1
 	else
@@ -817,11 +807,11 @@ slapd_version() {
 
 	# test if SLAPD_SERVICES contains an ldapi:/// listening port
 	if echo "${SLAPD_SERVICES}" | grep -q 'ldapi:' ; then
-		OPENLDAP_VERSION=$( ${LDAPSEARCH_BIN} -Y EXTERNAL -H "${HOST}" -b "${BASE}" -s "${SCOPE}" ${LDAPSEARCH_PARAMS} -LLL "${ATTR}" 2>/dev/null| grep "${ATTR}" )
+		OPENLDAP_VERSION=$( ${LDAPSEARCH_BIN} -Y EXTERNAL -H "${HOST}" -b "${BASE}" -s "${SCOPE}" "${LDAPSEARCH_PARAMS}" -LLL "${ATTR}" 2>/dev/null| grep "${ATTR}" )
 	fi
 
 	if [ "${OPENLDAP_VERSION}" = "" ] ; then
-		if [ ! -z ${SLAPD_BIN+x} ] && [ "${SLAPD_BIN}" != "" ] ; then
+		if [ -n "${SLAPD_BIN+x}" ] && [ "${SLAPD_BIN}" != "" ] ; then
 			OPENLDAP_VERSION="$( ${SLAPD_BIN} -VV 2>&1 | grep 'OpenLDAP' )"
 		fi
 	fi
@@ -841,7 +831,7 @@ display_status() {
 
 	if [ $status -eq 0 ]
 	then
-		PID=`cat $SLAPD_PID_FILE`
+		PID=$(cat $SLAPD_PID_FILE)
 
 		message "info" "[INFO] Process OpenLDAP is running (PID $PID)"
 		VER="$( slapd_version )"
@@ -851,8 +841,8 @@ display_status() {
 
 		message "info" "[INFO] Listening to services $SLAPD_SERVICES"
 
-		CPU=`ps -p $PID -o %cpu=`
-		MEM=`ps -p $PID -o %mem=`
+		CPU=$(ps -p "$PID" -o %cpu=)
+		MEM=$(ps -p "$PID" -o %mem=)
 
 		message "info" "[INFO] Process usage: $CPU% CPU / $MEM% MEM"
 
@@ -875,19 +865,19 @@ display_status() {
 	get_confvalues "suffix"
 	dbsufs=$RETVAL
 
-	if [ ! -z "$dbdirs" -o ! -z "$dbsufs" ]
+	if [ -n "$dbdirs" ] || [ -n "$dbsufs" ]
 	then
 		i=1
 		for dbdir in $dbdirs
 		do
 			# Table is not allowed, so we use awk
-			suf=`echo $dbsufs | awk -v j="$i" 'BEGIN{OFS=" "} {print $j}'`
-			sufprint=`echo $suf | sed "s/#20/ /"`
-			if [ ! -z $suf ]
+			suf=$(echo "$dbsufs" | awk -v j="$i" 'BEGIN{OFS=" "} {print $j}')
+			sufprint=$(echo "$suf" | sed "s/#20/ /")
+			if [ -n "$suf" ]
 			then
 				message "info" "[INFO] Detected suffix: $sufprint"
 			fi
-			i=`expr $i + 1`
+			i=$(( i + 1 ))
 		done
 	fi
 
@@ -909,9 +899,7 @@ configtest() {
 	fi
 
 	# slaptest
-	$SLAPTEST_BIN $SLAPTEST_PARAMS > /dev/null 2>&1
-
-	if [ $? -eq 0 ]
+	if $SLAPTEST_BIN "$SLAPTEST_PARAMS" > /dev/null 2>&1
 	then
 		message "info" "[OK] OpenLDAP configuration test successful"
 	else
@@ -943,7 +931,7 @@ reindex() {
 		# slapindex
 		if [ -z "$SU" ]
 		then
-			$SLAPINDEX_BIN $SLAPINDEX_PARAMS
+			$SLAPINDEX_BIN "$SLAPINDEX_PARAMS"
 		else
 			$SU "$SLAPINDEX_BIN $SLAPINDEX_PARAMS"
 		fi
@@ -983,7 +971,7 @@ backup() {
 		get_confvalues "directory"
 		dbdirs=$RETVAL
 
-		if [ -z "$dbdirs" -o -z "$dbsufs" ]
+		if [ -z "$dbdirs" ] || [ -z "$dbsufs" ]
 		then
 			message "alert" "[ALERT] No database directories found"
 			exit 1
@@ -994,16 +982,16 @@ backup() {
 	for dbdir in $dbdirs
 	do
 		# Table is not allowed, so we use awk
-		suf=`echo $dbsufs | awk -v j="$i" 'BEGIN{OFS=" "} {print $j}'`
+		suf=$(echo "$dbsufs" | awk -v j="$i" 'BEGIN{OFS=" "} {print $j}')
 
-		if [ -z $suf ]; then
+		if [ -z "$suf" ]; then
 			message "info" "[INFO] No suffix for $dbdir"
 		else
-			sufprint=`echo $suf | sed "s/#20/ /"`
-			dir=`basename $dbdir`
+			sufprint=$(echo "$suf" | sed "s/#20/ /")
+			dir=$(basename "$dbdir")
 			file="$BACKUP_PATH/$dir-$BACKUP_SUFFIX"
 
-			if [ ! -d "${dbdir}" ] || [ -z "$( ls -A ${dbdir} )" ]; then
+			if [ ! -d "${dbdir}" ] || [ -z "$( ls -A "${dbdir}" )" ]; then
 				message "info" "[INFO] No data in ${dbdir}, don't do any backup"
 				continue
 			fi
@@ -1011,7 +999,7 @@ backup() {
 			# slapcat
 			if [ -z "$SU" ]
 			then
-				$UMASK $MASK && $SLAPCAT_BIN -b "$sufprint" $SLAPCAT_PARAMS -l "$file" 2>/dev/null
+				$UMASK $MASK && $SLAPCAT_BIN -b "$sufprint" "$SLAPCAT_PARAMS" -l "$file" 2>/dev/null
 				ret=$?
 			else
 				$SU "$UMASK $MASK && $SLAPCAT_BIN -b \"$sufprint\" $SLAPCAT_PARAMS > \"$file\" 2>/dev/null"
@@ -1026,7 +1014,7 @@ backup() {
 			fi
 
 			# compress
-			if [ -z $BACKUP_COMPRESS_EXT ]
+			if [ -z "$BACKUP_COMPRESS_EXT" ]
 			then
 				message "info" "[OK] data saved in $file"
 			else
@@ -1047,7 +1035,7 @@ backup() {
 			fi
 		fi
 
-		i=`expr $i + 1`
+		i=$(( i + 1 ))
 	done
 
 }
@@ -1068,7 +1056,7 @@ backupconfig() {
 		# slapcat
 		if [ -z "$SU" ]
 		then
-			$UMASK $MASK && $SLAPCAT_BIN $SLAPCAT_PARAMS -n0 -F $SLAPD_CONF_DIR -l "$file" 2>/dev/null
+			$UMASK $MASK && $SLAPCAT_BIN "$SLAPCAT_PARAMS" -n0 -F "$SLAPD_CONF_DIR" -l "$file" 2>/dev/null
 			ret=$?
 		else
 			$SU "$UMASK $MASK && $SLAPCAT_BIN $SLAPCAT_PARAMS -n0 -F $SLAPD_CONF_DIR > \"$file\" 2>/dev/null"
@@ -1077,13 +1065,13 @@ backupconfig() {
 
 	elif [ "$SLAPD_CONF" ]
 	then
-		file="$BACKUP_PATH/slapd-`date +%Y%m%d%H%M%S`.conf"
-		cp $SLAPD_CONF $file
+		file="$BACKUP_PATH/slapd-$(date +%Y%m%d%H%M%S).conf"
+		cp "$SLAPD_CONF" "$file"
 		ret=$?
 	fi
 
 	# alert
-	if [ $ret -ne 0 ]
+	if [ "$ret" -ne 0 ]
 	then
 		message "alert" "[ALERT] OpenLDAP configuration backup failed"
 		exit 1
@@ -1115,7 +1103,7 @@ restore() {
 		get_confvalues "directory"
 		dbdirs=$RETVAL
 
-		if [ -z "$dbdirs" -o -z "$dbsufs" ]
+		if [ -z "$dbdirs" ] || [ -z "$dbsufs" ]
 		then
 			message "alert" "[ALERT] No database directories found"
 			exit 1
@@ -1126,18 +1114,18 @@ restore() {
 	for dbdir in $dbdirs
 	do
 		# Table is not allowed, so we use awk
-		suf=`echo $dbsufs | awk -v j="$i" 'BEGIN{OFS=" "} {print $j}'`
+		suf=$(echo "$dbsufs" | awk -v j="$i" 'BEGIN{OFS=" "} {print $j}')
 
-		if [ -z $suf ]; then
+		if [ -z "$suf" ]; then
 			message "info" "[INFO] No suffix for $dbdir"
 		else
-			sufprint=`echo $suf | sed "s/#20/ /"`
-			dir=`basename $dbdir`
+			sufprint=$(echo "$suf" | sed "s/#20/ /")
+			dir=$(basename "$dbdir")
 
 			# Get the most recent backup for this database
-			file=`ls -1t "$BACKUP_PATH/$dir-"* 2>/dev/null | head -1`
+			file=$(ls -1t "$BACKUP_PATH/$dir-"* 2>/dev/null | head -1)
 
-			if [ -z $file ]; then
+			if [ -z "$file" ]; then
 				message "info" "[INFO] No backup file for $sufprint, skipping..."
 			else
 				message "info" "[INFO] Restore file $file for $sufprint"
@@ -1167,15 +1155,15 @@ restore() {
 				# Delete current data
 				if [ -z "$SU" ]
 				then
-					rm -rf "$dbdir/"*
+					rm -rf "${dbdir:?}/"*
 				else
-					$SU "rm -rf $dbdir/"*
+					$SU "rm -rf ${dbdir:?}/"*
 				fi
 
 				# Import backup
 				if [ -z "$SU" ]
 				then
-					$SLAPADD_BIN -b "$sufprint" $SLAPADD_PARAMS 2>/dev/null
+					$SLAPADD_BIN -b "$sufprint" "$SLAPADD_PARAMS" 2>/dev/null
 				else
 					$SU "$SLAPADD_BIN -b \"$sufprint\" $SLAPADD_PARAMS 2>/dev/null"
 				fi
@@ -1207,7 +1195,7 @@ restore() {
 				fi
 			fi
 		fi
-		i=`expr $i + 1`
+		i=$(( i + 1 ))
 	done
 
 }
@@ -1219,9 +1207,9 @@ restoreconfig() {
 	if [ "$SLAPD_CONF_DIR" ]
 	then
 		# Get the most recent backup of cn=config
-		file=`ls -1t "$BACKUP_PATH/config-"* 2>/dev/null | head -1`
+		file=$(ls -1t "$BACKUP_PATH/config-"* 2>/dev/null | head -1)
 
-		if [ -z $file ]; then
+		if [ -z "$file" ]; then
 			message "info" "[INFO] No configuration backup found, skipping..."
 		else
 			message "info" "[INFO] Restore configuration file $file"
@@ -1229,15 +1217,15 @@ restoreconfig() {
 			# Delete current data
 			if [ -z "$SU" ]
 			then
-				rm -rf "$SLAPD_CONF_DIR/"*
+				rm -rf "${SLAPD_CONF_DIR:?}/"*
 			else
-				$SU "rm -rf $SLAPD_CONF_DIR/"*
+				$SU "rm -rf ${SLAPD_CONF_DIR:?}/"*
 			fi
 
 			# Import backup
 			if [ -z "$SU" ]
 			then
-				$SLAPADD_BIN -n0 -F $SLAPD_CONF_DIR -l $file 2>/dev/null
+				$SLAPADD_BIN -n0 -F "$SLAPD_CONF_DIR" -l "$file" 2>/dev/null
 			else
 				$SU "$SLAPADD_BIN -n0 -F $SLAPD_CONF_DIR -l $file 2>/dev/null"
 			fi
@@ -1246,13 +1234,13 @@ restoreconfig() {
 	elif [ "$SLAPD_CONF" ]
 	then
 		# Get the most recent backup of slapd.conf
-		file=`ls -1t "$BACKUP_PATH/slapd-"*.conf 2>/dev/null | head -1`
+		file=$(ls -1t "$BACKUP_PATH/slapd-"*.conf 2>/dev/null | head -1)
 
-		if [ -z $file ]; then
+		if [ -z "$file" ]; then
 			message "info" "[INFO] No configuration backup found, skipping..."
 		else
 			message "info" "[INFO] Restore configuration file $file"
-			cp -f $file $SLAPD_CONF
+			cp -f "$file" "$SLAPD_CONF"
 		fi
 	fi
 
@@ -1275,21 +1263,21 @@ get_provider_config() {
 		SUF=""
 		while read -r LINE
 		do
-			if printf %s "$LINE" | grep -q -P '^olcSuffix:[ \t]+' ; then
-				SUF="$( printf %s "$LINE" | sed -e 's/^olcSuffix:[ \t]\+//' -e 's/"//g' )"
+			if printf '%s' "$LINE" | grep -q -P '^olcSuffix:[ \t]+' ; then
+				SUF="$( printf '%s' "$LINE" | sed -e 's/^olcSuffix:[ \t]\+//' -e 's/"//g' )"
 			fi
 			# test if the olcSyncrepl attribute is base64 encoded - decode it if yes before processing the line
-			if printf %s "$LINE" | grep -q -P '^olcSyncrepl::' ; then
+			if printf '%s' "$LINE" | grep -q -P '^olcSyncrepl::' ; then
 					LINEDECODED="olcSyncrepl: "
 					LINEDECODED+=$(echo "$LINE" | cut -d ' ' -f 2 | base64 -d -i)
 					LINE=$LINEDECODED
 			fi
-			if printf %s "$LINE" | grep -q -P '^olcSyncrepl:[ \t]+' ; then
+			if printf '%s' "$LINE" | grep -q -P '^olcSyncrepl:[ \t]+' ; then
 				# add detected provider to the list of detected providers for this suffix (\n separated)
 				PROVIDER[${SUF}]="${PROVIDER[$SUF]}
-$( printf %s "${LINE}" | sed -e 's/olcSyncrepl:[ \t]\+{*[0-9]*}*//' )"
+$( printf '%s' "${LINE}" | sed -e 's/olcSyncrepl:[ \t]\+{*[0-9]*}*//' )"
 				# remove starting \n
-				PROVIDER[${SUF}]="$( printf %s "${PROVIDER[${SUF}]}" | sed -e ':a;N;$!ba;s/^\n//g' )"
+				PROVIDER[${SUF}]="$( printf '%s' "${PROVIDER[${SUF}]}" | sed -e ':a;N;$!ba;s/^\n//g' )"
 			fi
 		done <<< "${DUMP}"
 
@@ -1300,33 +1288,33 @@ $( printf %s "${LINE}" | sed -e 's/olcSyncrepl:[ \t]\+{*[0-9]*}*//' )"
 		while IFS= read -r LINE
 		do
 			# unwrap file (ie, join lines that begins with space or tab
-			if printf %s "$LINE" | grep -q -P '^[ \t]+' ; then
+			if printf '%s' "$LINE" | grep -q -P '^[ \t]+' ; then
 				# remove starting space or tab
-				LINE=$( printf %s "${LINE}" | sed -e 's/^[ \t]\+//g' )
-				DUMP=$( printf %s "${DUMP} ${LINE}" )
+				LINE=$( printf '%s' "${LINE}" | sed -e 's/^[ \t]\+//g' )
+				DUMP=$( printf '%s %s' "${DUMP}" "${LINE}" )
 			else
-				DUMP=$( printf %s "${DUMP}\n${LINE}" )
+				DUMP=$( printf '%s\n%s' "${DUMP}" "${LINE}" )
 			fi
 		done < "$SLAPD_CONF"
 		# parse DUMP variable for getting providers
 		SUF=""
 		while read -r LINE
 		do
-			if printf %s "$LINE" | grep -q -P '^suffix[ \t]+' ; then
-				SUF="$( printf %s "$LINE" | sed -e 's/^suffix[ \t]\+//' -e 's/"//g' )"
+			if printf '%s' "$LINE" | grep -q -P '^suffix[ \t]+' ; then
+				SUF="$( printf '%s' "$LINE" | sed -e 's/^suffix[ \t]\+//' -e 's/"//g' )"
 			fi
-			if printf %s "$LINE" | grep -q -P '^syncrepl[ \t]+' ; then
+			if printf '%s' "$LINE" | grep -q -P '^syncrepl[ \t]+' ; then
 				# add detected provider to the list of detected providers for this suffix (\n separated)
 				PROVIDER[${SUF}]="${PROVIDER[$SUF]}
-$( printf %s "${LINE}" | sed -e 's/syncrepl[ \t]\+//' )"
+$( printf '%s' "${LINE}" | sed -e 's/syncrepl[ \t]\+//' )"
 				# remove starting \n
-				PROVIDER[${SUF}]="$( printf %s "${PROVIDER[${SUF}]}" | sed -e ':a;N;$!ba;s/^\n//g' )"
+				PROVIDER[${SUF}]="$( printf '%s' "${PROVIDER[${SUF}]}" | sed -e ':a;N;$!ba;s/^\n//g' )"
 			fi
 		done <<< "${DUMP}"
 	fi
 	for key in "${!PROVIDER[@]}"; do
-		printf "Suffix: %s\n" "${key}"
-		printf "detected providers:\n%s\n\n" "${PROVIDER[$key]}"
+		printf 'Suffix: %s\n' "${key}"
+		printf 'detected providers:\n%s\n\n' "${PROVIDER[$key]}"
 	done
 }
 
@@ -1343,25 +1331,25 @@ compare_CSN() {
 	#YYYYMMDDhhmmss.uuuuuu (where u is microseconds)
 	csn1us="$( date --date="${csn1:0:4}-${csn1:4:2}-${csn1:6:2} ${csn1:8:2}:${csn1:10:2}:${csn1:12:2}" +%s )"
 	csn2us="$( date --date="${csn2:0:4}-${csn2:4:2}-${csn2:6:2} ${csn2:8:2}:${csn2:10:2}:${csn2:12:2}" +%s )"
-	let csn1us="${csn1us}*1000000"
-	let csn2us="${csn2us}*1000000"
+	(( csn1us="${csn1us}*1000000" ))
+	(( csn2us="${csn2us}*1000000" ))
 
 	# if microseconds part present, add microseconds
 	if [ "${csn1:14:1}" = "." ]; then
 		us=${csn1:15:6}
-		us=$(( $( printf %s "${us}" | sed -e 's/^[0]\+//' ) ))
-		let csn1us="${csn1us}+${us}"
+		us=$(( $( printf '%s' "${us}" | sed -e 's/^[0]\+//' ) ))
+		(( csn1us="${csn1us}+${us}" ))
 	fi
 	if [ "${csn2:14:1}" = "." ]; then
 		us=${csn2:15:6}
-		us=$(( $( printf %s "${us}" | sed -e 's/^[0]\+//' ) ))
-		let csn2us="${csn2us}+${us}"
+		us=$(( $( printf '%s' "${us}" | sed -e 's/^[0]\+//' ) ))
+		(( csn2us="${csn2us}+${us}" ))
 	fi
 
 	# compute delta between CSN
-	let delta="${csn2us}-${csn1us}"
-	let deltaabs=${delta#-}
-	if (( ${deltaabs} <= ${TOLERANCE_CSN} )); then
+	(( delta="${csn2us}-${csn1us}" ))
+	(( deltaabs=${delta#-} ))
+	if (( deltaabs <= TOLERANCE_CSN )); then
 		return 0
 	else
 		if [ "${delta}" -gt "0" ]; then
@@ -1379,8 +1367,8 @@ check_sync() {
 	RES=0 # result OK by default (if nothing to check, sync=OK)
 
 	LOCAL_URL="${SLAPD_SERVICES% }"
-	LOCAL_URL="$( printf ${LOCAL_URL} | sed -e 's/\*/localhost/g' )"
-	LOCAL_URL_SSL=$( printf "%s" "${SLAPD_SERVICES}" | sed -e 's/\*/localhost/g' -e 's/^.*\(^\|[ \t]\)\(ldaps:[^ \t\r\n]\+\).*$/\2/' )
+	LOCAL_URL="$( printf '%s' "${LOCAL_URL}" | sed -e 's/\*/localhost/g' )"
+	LOCAL_URL_SSL=$( printf '%s' "${SLAPD_SERVICES}" | sed -e 's/\*/localhost/g' -e 's/^.*\(^\|[ \t]\)\(ldaps:[^ \t\r\n]\+\).*$/\2/' )
 
 	# Is there any provider configuration?
 	if [[ ${#PROVIDER[@]} -eq "0" ]]; then
@@ -1413,45 +1401,45 @@ check_sync() {
 			echo "Checking contextCSN for suffix ${SUFFIX} on remote host ${PHOST}"
 			# Get remote provider contextCSN (one contextCSN per line)
 			# Certificate authentication
-			if [[ ! -z "$PCERT" ]] && [[ ! -z "$PKEY" ]] ; then
-				if [[ ! -z "$PCACERTDIR" ]]; then
-					CERTVARS='LDAPTLS_CACERTDIR="${PCACERTDIR}" LDAPTLS_CERT="${PCERT}" LDAPTLS_KEY="${PKEY}" LDAPTLS_REQCERT="try"'
+			if [[ -n "$PCERT" ]] && [[ -n "$PKEY" ]] ; then
+				if [[ -n "$PCACERTDIR" ]]; then
+					CERTVARS="LDAPTLS_CACERTDIR=${PCACERTDIR} LDAPTLS_CERT=${PCERT} LDAPTLS_KEY=${PKEY} LDAPTLS_REQCERT=try"
 				else
-					CERTVARS='LDAPTLS_CACERT="${PCACERT}" LDAPTLS_CERT="${PCERT}" LDAPTLS_KEY="${PKEY}" LDAPTLS_REQCERT="try"'
+					CERTVARS="LDAPTLS_CACERT=${PCACERT} LDAPTLS_CERT=${PCERT} LDAPTLS_KEY=${PKEY} LDAPTLS_REQCERT=""try"
 				fi
-				CONTEXTCSN=$(eval "${CERTVARS}" ${LDAPSEARCH_BIN} -Y EXTERNAL -H "${PHOST}" -b "${PBASEDN}" -o nettimeout=5 -s base ${LDAPSEARCH_PARAMS} contextCSN -LLL 2>/dev/null )
+				CONTEXTCSN=$(eval "${CERTVARS}" ${LDAPSEARCH_BIN} -Y EXTERNAL -H "${PHOST}" -b "${PBASEDN}" -o nettimeout=5 -s base "${LDAPSEARCH_PARAMS}" contextCSN -LLL 2>/dev/null )
 			# If bindDN is empty, try anonymous bind
 			elif [ -z "$PBINDDN" ]; then
-				CONTEXTCSN=$( ${LDAPSEARCH_BIN} -x -H "${PHOST}" -b "${PBASEDN}" -o nettimeout=5 -s base ${LDAPSEARCH_PARAMS} contextCSN -LLL 2>/dev/null )
+				CONTEXTCSN=$( ${LDAPSEARCH_BIN} -x -H "${PHOST}" -b "${PBASEDN}" -o nettimeout=5 -s base "${LDAPSEARCH_PARAMS}" contextCSN -LLL 2>/dev/null )
 			# Password authentication (default)
 			else
-				CONTEXTCSN=$( ${LDAPSEARCH_BIN} -x -H "${PHOST}" -D "${PBINDDN}" -w "${PBINDPW}" -b "${PBASEDN}" -o nettimeout=5 -s base ${LDAPSEARCH_PARAMS} contextCSN -LLL 2>/dev/null )
+				CONTEXTCSN=$( ${LDAPSEARCH_BIN} -x -H "${PHOST}" -D "${PBINDDN}" -w "${PBINDPW}" -b "${PBASEDN}" -o nettimeout=5 -s base "${LDAPSEARCH_PARAMS}" contextCSN -LLL 2>/dev/null )
 			fi
 
 			# Checking status of previous command
 			if [ $? -ne 0 ]; then
 				echo "    ERROR: search on remote host impossible!"
-				let "RES=-1"
+				(( "RES=-1" ))
 				break
 			fi
 			CONTEXTCSN=$( echo "$CONTEXTCSN" | grep contextCSN | sed -e 's/^contextCSN: //i' )
 
 			# get local contextCSN
 			# Certificate authentication
-			if [[ ! -z "$PCERT" ]] && [[ ! -z "$PKEY" ]] ; then
-				if [[ ! -z "$PCACERTDIR" ]]; then
-					CERTVARS='LDAPTLS_CACERTDIR="${PCACERTDIR}" LDAPTLS_CERT="${PCERT}" LDAPTLS_KEY="${PKEY}" LDAPTLS_REQCERT="try"'
+			if [[ -n "$PCERT" ]] && [[ -n "$PKEY" ]] ; then
+				if [[ -n "$PCACERTDIR" ]]; then
+					CERTVARS="LDAPTLS_CACERTDIR=${PCACERTDIR} LDAPTLS_CERT=${PCERT} LDAPTLS_KEY=${PKEY} LDAPTLS_REQCERT=try"
 				else
-					CERTVARS='LDAPTLS_CACERT="${PCACERT}" LDAPTLS_CERT="${PCERT}" LDAPTLS_KEY="${PKEY}" LDAPTLS_REQCERT="try"'
+					CERTVARS="LDAPTLS_CACERT=${PCACERT} LDAPTLS_CERT=${PCERT} LDAPTLS_KEY=${PKEY} LDAPTLS_REQCERT=try"
 				fi
-				localContextCSN=$(eval "${CERTVARS}" ${LDAPSEARCH_BIN} -Y EXTERNAL -H "${LOCAL_URL_SSL}" -b "${PBASEDN}" -o nettimeout=5 -s base ${LDAPSEARCH_PARAMS} contextCSN -LLL 2>/dev/null | grep 'contextCSN' | sed -e 's/^contextCSN: //' )
+				localContextCSN=$(eval "${CERTVARS}" ${LDAPSEARCH_BIN} -Y EXTERNAL -H "${LOCAL_URL_SSL}" -b "${PBASEDN}" -o nettimeout=5 -s base "${LDAPSEARCH_PARAMS}" contextCSN -LLL 2>/dev/null | grep 'contextCSN' | sed -e 's/^contextCSN: //' )
 			# If bindDN is empty, try anonymous bind
 			elif [ -z "$PBINDDN" ]; then
-				localContextCSN=$( ${LDAPSEARCH_BIN} -x -H "${LOCAL_URL}" -b "${PBASEDN}" -o nettimeout=5 -s base ${LDAPSEARCH_PARAMS} contextCSN -LLL 2>/dev/null | grep 'contextCSN' | sed -e 's/^contextCSN: //' )
+				localContextCSN=$( ${LDAPSEARCH_BIN} -x -H "${LOCAL_URL}" -b "${PBASEDN}" -o nettimeout=5 -s base "${LDAPSEARCH_PARAMS}" contextCSN -LLL 2>/dev/null | grep 'contextCSN' | sed -e 's/^contextCSN: //' )
 
 			# Password authentication (default)
 			else
-				localContextCSN=$( ${LDAPSEARCH_BIN} -x -H "${LOCAL_URL}" -D "${PBINDDN}" -w "${PBINDPW}" -b "${PBASEDN}" -o nettimeout=5 -s base ${LDAPSEARCH_PARAMS} contextCSN -LLL 2>/dev/null | grep 'contextCSN' | sed -e 's/^contextCSN: //' )
+				localContextCSN=$( ${LDAPSEARCH_BIN} -x -H "${LOCAL_URL}" -D "${PBINDDN}" -w "${PBINDPW}" -b "${PBASEDN}" -o nettimeout=5 -s base "${LDAPSEARCH_PARAMS}" contextCSN -LLL 2>/dev/null | grep 'contextCSN' | sed -e 's/^contextCSN: //' )
 			fi
 
 			# compare contextCSN values
@@ -1460,7 +1448,7 @@ check_sync() {
 				#  identify sid part
 				#  contextCSN = 20171128170017.708386Z#000000#001#000000
 				#					      ^^^
-				SID=$( echo ${CSN} | sed -e 's/^.*\(#[0-9]\+#\)[^#]*$/\1/' )
+				SID=$( echo "${CSN}" | sed -e 's/^.*\(#[0-9]\+#\)[^#]*$/\1/' )
 				echo "  Checking SID ${SID}"
 
 				#  check matching local slave ContextCSN
@@ -1468,16 +1456,16 @@ check_sync() {
 					# get corresponding local slave contextCSN
 					matchingLocalContextCSN=$( echo -e "$localContextCSN" | grep "$SID" )
 					# Check if corresponding local slave contextCSN is identical to remote provider contextCSN
-					compare_CSN "${matchingLocalContextCSN}" "${CSN}"
-					if [[ "$?" -eq "0" ]]; then
+					if compare_CSN "${matchingLocalContextCSN}" "${CSN}"
+					then
 						echo "    INFO: remote ($CSN) and local ($matchingLocalContextCSN) contextCSN found and synchronized"
 					else
 						echo "    ERROR: remote ($CSN) and local ($matchingLocalContextCSN) contextCSN found, but not synchronized!"
-						let "RES=RES+1"
+						(( "RES=RES+1" ))
 					fi
 				else
 					echo "    ERROR: no matching local contextCSN ($localContextCSN) found for remote ($CSN) contextCSN!"
-					let "RES=RES+1"
+					(( "RES=RES+1" ))
 				fi
 			done
 
@@ -1501,17 +1489,17 @@ escape_value()
 	VALUE="$1"
 
 	# escape ampersand (&)
-	if printf "%s" $VALUE | grep -q -F '&'; then
+	if printf "%s" "$VALUE" | grep -q -F '&'; then
 		VALUE=$( printf "%s" "$VALUE" | sed -e 's/\&/\\\&/g' )
 	fi
 
 	# escape slash (/)
-	if printf "%s" $VALUE | grep -q -F '/'; then
+	if printf "%s" "$VALUE" | grep -q -F '/'; then
 		VALUE=$( printf "%s" "$VALUE" | sed -e 's/\//\\\//g' )
 	fi
 
 	# escape line-feed (\n)
-	if printf "%s" $VALUE | grep -q -F '\n'; then
+	if printf "%s" "$VALUE" | grep -q -F '\n'; then
 		VALUE=$( printf "%s" "$VALUE" | sed -e 's/\\n/\\\\n/g' )
 	fi
 
@@ -1529,9 +1517,9 @@ replace_pattern()
 	PATTERN=$( escape_value "$PATTERN" )
 	VALUE=$( escape_value "$VALUE" )
 
-	if [ ! -z ${PATTERN+x} ] && [ ! -z ${VALUE+x} ] && [ ! -z ${FILE+x} ]; then
+	if [ -n "${PATTERN+x}" ] && [ -n "${VALUE+x}" ] && [ -n "${FILE+x}" ]; then
 		if [ "${PATTERN}" != "" ] && [ "${VALUE}" != "" ] && [ "${FILE}" != "" ]; then
-			sed -i -e "s/${PATTERN}/${VALUE}/g" ${FILE}
+			sed -i -e "s/${PATTERN}/${VALUE}/g" "${FILE}"
 		fi
 	fi
 
@@ -1555,9 +1543,9 @@ import_flat_config_template() {
 	fi
 
 
-	if [ ! -z "$( ls -A ${SLAPD_CONF} 2>/dev/null )" ] ; then
+	if [ -n "$( ls -A ${SLAPD_CONF} 2>/dev/null )" ] ; then
 		message "info" "[INFO] Configuration data found, launch configuration backup"
-		cp -a "${SLAPD_CONF}" "$BACKUP_PATH/slapd-`date +%Y%m%d%H%M%S`.conf"
+		cp -a "${SLAPD_CONF}" "$BACKUP_PATH/slapd-$(date +%Y%m%d%H%M%S).conf"
 	fi
 
 	if [ -z ${CONFIG_FLAT_TEMPLATE_FILE+x} ] || [ "${CONFIG_FLAT_TEMPLATE_FILE}" = "" ]; then
@@ -1566,7 +1554,7 @@ import_flat_config_template() {
 
 	# Prepare template for replacement
 	CONFIG_TEMPLATE_PATH="${CLI_CONF_FILE%/*}/${CONFIG_FLAT_TEMPLATE_FILE}"
-	if [ -f ${CONFIG_TEMPLATE_PATH} ]
+	if [ -f "${CONFIG_TEMPLATE_PATH}" ]
 	then
 		message "info" "[INFO] Using ${CONFIG_TEMPLATE_PATH} as template"
 	else
@@ -1575,9 +1563,9 @@ import_flat_config_template() {
 	fi
 
 	CONFIG_FILE_PATH="${SLAPD_CONF}"
-	cp -f ${CONFIG_TEMPLATE_PATH} ${CONFIG_FILE_PATH}
-	chown $SLAPD_USER:$SLAPD_GROUP ${CONFIG_FILE_PATH}
-	chmod 640 ${CONFIG_FILE_PATH}
+	cp -f "${CONFIG_TEMPLATE_PATH}" "${CONFIG_FILE_PATH}"
+	chown "$SLAPD_USER":"$SLAPD_GROUP" "${CONFIG_FILE_PATH}"
+	chmod 640 "${CONFIG_FILE_PATH}"
 
 	replace_pattern "CONFIG_FQDN" "${CONFIG_FQDN}" "${CONFIG_FILE_PATH}"
 	replace_pattern "CONFIG_LOGLEVEL" "${CONFIG_LOGLEVEL}" "${CONFIG_FILE_PATH}"
@@ -1585,11 +1573,11 @@ import_flat_config_template() {
 		replace_pattern "CONFIG_LOGFILE" "${CONFIG_LOGFILE}" "${CONFIG_FILE_PATH}"
 	fi
 	replace_pattern "CONFIG_MANAGERROOTDN" "${CONFIG_MANAGERROOTDN}" "${CONFIG_FILE_PATH}"
-	replace_pattern "CONFIG_MANAGERROOTPW" "$( compute_hash ${CONFIG_MANAGERROOTPW} )" "${CONFIG_FILE_PATH}"
+	replace_pattern "CONFIG_MANAGERROOTPW" "$( compute_hash "${CONFIG_MANAGERROOTPW}" )" "${CONFIG_FILE_PATH}"
 	replace_pattern "CONFIG_CONFIGROOTDN" "${CONFIG_CONFIGROOTDN}" "${CONFIG_FILE_PATH}"
-	replace_pattern "CONFIG_CONFIGROOTPW" "$( compute_hash ${CONFIG_CONFIGROOTPW} )" "${CONFIG_FILE_PATH}"
+	replace_pattern "CONFIG_CONFIGROOTPW" "$( compute_hash "${CONFIG_CONFIGROOTPW}" )" "${CONFIG_FILE_PATH}"
 	replace_pattern "CONFIG_MONITORROOTDN" "${CONFIG_MONITORROOTDN}" "${CONFIG_FILE_PATH}"
-	replace_pattern "CONFIG_MONITORROOTPW" "$( compute_hash ${CONFIG_MONITORROOTPW} )" "${CONFIG_FILE_PATH}"
+	replace_pattern "CONFIG_MONITORROOTPW" "$( compute_hash "${CONFIG_MONITORROOTPW}" )" "${CONFIG_FILE_PATH}"
 	replace_pattern "CONFIG_SUFFIX" "${CONFIG_SUFFIX}" "${CONFIG_FILE_PATH}"
 	replace_pattern "CONFIG_DATADIR" "${CONFIG_DATADIR}" "${CONFIG_FILE_PATH}"
 
@@ -1605,7 +1593,7 @@ import_ldif_config_template() {
 	fi
 
 
-	if [ ! -z "$( ls -A ${SLAPD_CONF_DIR} )" ] ; then
+	if [ -n "$( ls -A "${SLAPD_CONF_DIR}" )" ] ; then
 		message "info" "[INFO] Configuration data found, launch configuration backup"
 		backupconfig
 	fi
@@ -1616,7 +1604,7 @@ import_ldif_config_template() {
 
 	# Prepare template for replacement
 	CONFIG_TEMPLATE_PATH="${CLI_CONF_FILE%/*}/${CONFIG_LDIF_TEMPLATE_FILE}"
-	if [ -f ${CONFIG_TEMPLATE_PATH} ]
+	if [ -f "${CONFIG_TEMPLATE_PATH}" ]
 	then
 		message "info" "[INFO] Using ${CONFIG_TEMPLATE_PATH} as template"
 	else
@@ -1625,9 +1613,9 @@ import_ldif_config_template() {
 	fi
 
 	CONFIG_FILE_PATH="${CONFIG_TEMPLATE_PATH%.ldif}-filled.ldif"
-	cp -f ${CONFIG_TEMPLATE_PATH} ${CONFIG_FILE_PATH}
-	chown $SLAPD_USER:$SLAPD_GROUP ${CONFIG_FILE_PATH}
-	chmod 640 ${CONFIG_FILE_PATH}
+	cp -f "${CONFIG_TEMPLATE_PATH}" "${CONFIG_FILE_PATH}"
+	chown "$SLAPD_USER":"$SLAPD_GROUP" "${CONFIG_FILE_PATH}"
+	chmod 640 "${CONFIG_FILE_PATH}"
 
 	replace_pattern "CONFIG_FQDN" "${CONFIG_FQDN}" "${CONFIG_FILE_PATH}"
 	replace_pattern "CONFIG_LOGLEVEL" "${CONFIG_LOGLEVEL}" "${CONFIG_FILE_PATH}"
@@ -1635,17 +1623,17 @@ import_ldif_config_template() {
 		replace_pattern "CONFIG_LOGFILE" "${CONFIG_LOGFILE}" "${CONFIG_FILE_PATH}"
 	fi
 	replace_pattern "CONFIG_MANAGERROOTDN" "${CONFIG_MANAGERROOTDN}" "${CONFIG_FILE_PATH}"
-	replace_pattern "CONFIG_MANAGERROOTPW" "$( compute_hash ${CONFIG_MANAGERROOTPW} )" "${CONFIG_FILE_PATH}"
+	replace_pattern "CONFIG_MANAGERROOTPW" "$( compute_hash "${CONFIG_MANAGERROOTPW}" )" "${CONFIG_FILE_PATH}"
 	replace_pattern "CONFIG_CONFIGROOTDN" "${CONFIG_CONFIGROOTDN}" "${CONFIG_FILE_PATH}"
-	replace_pattern "CONFIG_CONFIGROOTPW" "$( compute_hash ${CONFIG_CONFIGROOTPW} )" "${CONFIG_FILE_PATH}"
+	replace_pattern "CONFIG_CONFIGROOTPW" "$( compute_hash "${CONFIG_CONFIGROOTPW}" )" "${CONFIG_FILE_PATH}"
 	replace_pattern "CONFIG_MONITORROOTDN" "${CONFIG_MONITORROOTDN}" "${CONFIG_FILE_PATH}"
-	replace_pattern "CONFIG_MONITORROOTPW" "$( compute_hash ${CONFIG_MONITORROOTPW} )" "${CONFIG_FILE_PATH}"
+	replace_pattern "CONFIG_MONITORROOTPW" "$( compute_hash "${CONFIG_MONITORROOTPW}" )" "${CONFIG_FILE_PATH}"
 	replace_pattern "CONFIG_SUFFIX" "${CONFIG_SUFFIX}" "${CONFIG_FILE_PATH}"
 	replace_pattern "CONFIG_DATADIR" "${CONFIG_DATADIR}" "${CONFIG_FILE_PATH}"
-	if [ ! -z ${SLAPD_CONF+x} ] && [ "${SLAPD_CONF}" != "" ]; then
+	if [ -n "${SLAPD_CONF+x}" ] && [ "${SLAPD_CONF}" != "" ]; then
 		replace_pattern "^olcConfigFile: .*$" "olcConfigFile: ${SLAPD_CONF}" "${CONFIG_FILE_PATH}"
 	fi
-	if [ ! -z ${SLAPD_CONF_DIR+x} ] && [ "${SLAPD_CONF_DIR}" != "" ]; then
+	if [ -n "${SLAPD_CONF_DIR+x}" ] && [ "${SLAPD_CONF_DIR}" != "" ]; then
 		replace_pattern "^olcConfigDir: .*$" "olcConfigDir: ${SLAPD_CONF_DIR}" "${CONFIG_FILE_PATH}"
 	fi
 
@@ -1654,9 +1642,9 @@ import_ldif_config_template() {
 	message "info" "[INFO] Delete configuration data in ${SLAPD_CONF_DIR}"
 	if [ -z "$SU" ]
 	then
-		rm -rf "${SLAPD_CONF_DIR}/"*
+		rm -rf "${SLAPD_CONF_DIR:?}/"*
 	else
-		$SU "rm -rf ${SLAPD_CONF_DIR}/"*
+		$SU "rm -rf ${SLAPD_CONF_DIR:?}/"*
 	fi
 
 	# Import backup
@@ -1664,7 +1652,7 @@ import_ldif_config_template() {
 	SLAPADD_PARAMS="$SLAPADD_PARAMS -n0 -F $SLAPD_CONF_DIR -l ${CONFIG_FILE_PATH}"
 	if [ -z "$SU" ]
 	then
-		$SLAPADD_BIN $SLAPADD_PARAMS 2>/dev/null
+		$SLAPADD_BIN "$SLAPADD_PARAMS" 2>/dev/null
 	else
 		$SU "$SLAPADD_BIN $SLAPADD_PARAMS" 2>/dev/null
 	fi
@@ -1682,11 +1670,11 @@ convert_config() {
 		message "alert" "[ALERT] Missing argument: you need to supply flat and ldif configuration filenames"
 		exit 1
 	fi
-	if [ ! -f ${1} ] ; then
+	if [ ! -f "${1}" ] ; then
 		message "alert" "[ALERT] flat input configuration file does not exist"
 		exit 2
 	fi
-	if [ -e ${2} ] ; then
+	if [ -e "${2}" ] ; then
 		message "alert" "[ALERT] ldif output configuration file already exist"
 		exit 3
 	fi
@@ -1697,17 +1685,16 @@ convert_config() {
 
 	# import configuration into the temporary configuration directory
 	SLAPTEST_PARAMS=" -n0 -F ${TMP_CONF_DIR} -f ${1}"
-	$SLAPTEST_BIN $SLAPTEST_PARAMS > /dev/null 2>&1
-
-	if [ $? -ne 0 ] ; then
+	if ! $SLAPTEST_BIN "$SLAPTEST_PARAMS" > /dev/null 2>&1
+	then
 		message "alert" "[ALERT] conversion failed during import"
 		rm -rf "${TMP_CONF_DIR}"
 		exit 4
 	fi
 
 	# export configuration in ldif
-	$SLAPCAT_BIN $SLAPCAT_PARAMS -n0 -F ${TMP_CONF_DIR} -l "$2" 2>/dev/null
-	if [ $? -ne 0 ] ; then
+	if ! $SLAPCAT_BIN "$SLAPCAT_PARAMS" -n0 -F "${TMP_CONF_DIR}" -l "$2" 2>/dev/null
+	then
 		message "alert" "[ALERT] conversion failed during export"
 		rm -rf "${TMP_CONF_DIR}"
 		exit 5
@@ -1731,12 +1718,12 @@ convert_config() {
 
 	# remove "cn=schema,cn=config" content, which is useless.
 	# the content of this entry is automatically generated by slapd in memory at startup
-	sed -i -e '/dn: cn=schema,cn=config/,/^$/{/^\(dn: \|objectClass: \|cn: \|$\)/!d;}' ${2}
+	sed -i -e '/dn: cn=schema,cn=config/,/^$/{/^\(dn: \|objectClass: \|cn: \|$\)/!d;}' "${2}"
 
-	if [ ! -z ${SLAPD_CONF+x} ] && [ "${SLAPD_CONF}" != "" ]; then
+	if [ -n "${SLAPD_CONF+x}" ] && [ "${SLAPD_CONF}" != "" ]; then
 		replace_pattern "^olcConfigFile: .*$" "olcConfigFile: ${SLAPD_CONF}" "$2"
 	fi
-	if [ ! -z ${SLAPD_CONF_DIR+x} ] && [ "${SLAPD_CONF_DIR}" != "" ]; then
+	if [ -n "${SLAPD_CONF_DIR+x}" ] && [ "${SLAPD_CONF_DIR}" != "" ]; then
 		replace_pattern "^olcConfigDir: .*$" "olcConfigDir: ${SLAPD_CONF_DIR}" "$2"
 	fi
 
@@ -1752,17 +1739,17 @@ build_config_template() {
 		message "alert" "[ALERT] Missing argument: you need to supply input ldif configuration and output ldif template filenames"
 		exit 1
 	fi
-	if [ ! -f ${1} ] ; then
+	if [ ! -f "${1}" ] ; then
 		message "alert" "[ALERT] input ldif configuration file does not exist"
 		exit 2
 	fi
-	if [ -e ${2} ] ; then
+	if [ -e "${2}" ] ; then
 		message "alert" "[ALERT] output ldif template already exist"
 		exit 3
 	fi
 	message "info" "[INFO] Convert ldif configuration ${1} to ldif template ${2}..."
 
-	cp -a ${1} ${2}
+	cp -a "${1}" "${2}"
 
 
 	# remove operational attributes
@@ -1780,32 +1767,32 @@ build_config_template() {
 
 	# remove "cn=schema,cn=config" content, which is useless.
 	# the content of this entry is automatically generated by slapd in memory at startup
-	sed -i -e '/dn: cn=schema,cn=config/,/^$/{/^\(dn: \|objectClass: \|cn: \|$\)/!d;}' ${2}
+	sed -i -e '/dn: cn=schema,cn=config/,/^$/{/^\(dn: \|objectClass: \|cn: \|$\)/!d;}' "${2}"
 
 	# remove every olcRootPW line
 	sed -i -e "/^olcRootPW:.*$/d" "${2}"
 
 	# set olcConfigFile and olcConfigDir if defined
-	if [ ! -z ${SLAPD_CONF+x} ] && [ "${SLAPD_CONF}" != "" ]; then
+	if [ -n "${SLAPD_CONF+x}" ] && [ "${SLAPD_CONF}" != "" ]; then
 		replace_pattern "^olcConfigFile: .*$" "olcConfigFile: ${SLAPD_CONF}" "$2"
 	fi
-	if [ ! -z ${SLAPD_CONF_DIR+x} ] && [ "${SLAPD_CONF_DIR}" != "" ]; then
+	if [ -n "${SLAPD_CONF_DIR+x}" ] && [ "${SLAPD_CONF_DIR}" != "" ]; then
 		replace_pattern "^olcConfigDir: .*$" "olcConfigDir: ${SLAPD_CONF_DIR}" "$2"
 	fi
 
 	# replace olcRootDN and olcRootPW by the given placeholder for cn=config and for data base
-	if [ ! -z ${CONFIG_MANAGERROOTDN+x} ] && [ "${CONFIG_MANAGERROOTDN}" != "" ]; then
+	if [ -n "${CONFIG_MANAGERROOTDN+x}" ] && [ "${CONFIG_MANAGERROOTDN}" != "" ]; then
 		sed -i -e "s/^olcRootDN: ${CONFIG_MANAGERROOTDN}$/olcRootDN: CONFIG_MANAGERROOTDN\nolcRootPW: CONFIG_MANAGERROOTPW/" "$2"
 	fi
-	if [ ! -z ${CONFIG_CONFIGROOTDN+x} ] && [ "${CONFIG_CONFIGROOTDN}" != "" ]; then
+	if [ -n "${CONFIG_CONFIGROOTDN+x}" ] && [ "${CONFIG_CONFIGROOTDN}" != "" ]; then
 		sed -i -e "s/^olcRootDN: ${CONFIG_CONFIGROOTDN}$/olcRootDN: CONFIG_CONFIGROOTDN\nolcRootPW: CONFIG_CONFIGROOTPW/" "$2"
 	fi
-	if [ ! -z ${CONFIG_MONITORROOTDN+x} ] && [ "${CONFIG_MONITORROOTDN}" != "" ]; then
+	if [ -n "${CONFIG_MONITORROOTDN+x}" ] && [ "${CONFIG_MONITORROOTDN}" != "" ]; then
 		sed -i -e "s/^olcRootDN: ${CONFIG_MONITORROOTDN}$/olcRootDN: CONFIG_MONITORROOTDN\nolcRootPW: CONFIG_MONITORROOTPW/" "$2"
 	fi
 
 	# replace olcDbDirectory by the given placeholder
-	if [ ! -z ${CONFIG_DATADIR+x} ] && [ "${CONFIG_DATADIR}" != "" ]; then
+	if [ -n "${CONFIG_DATADIR+x}" ] && [ "${CONFIG_DATADIR}" != "" ]; then
 		replace_pattern "^olcDbDirectory: ${CONFIG_DATADIR}$" "olcDbDirectory: CONFIG_DATADIR" "$2"
 	fi
 
@@ -1821,7 +1808,7 @@ build_config_template() {
 	replace_pattern "^olcSaslHost: .*$" "olcSaslHost: CONFIG_FQDN" "${2}"
 
 	# replace the suffix value by the given placeholder everywhere in the template
-	if [ ! -z ${CONFIG_SUFFIX+x} ] && [ "${CONFIG_SUFFIX}" != "" ]; then
+	if [ -n "${CONFIG_SUFFIX+x}" ] && [ "${CONFIG_SUFFIX}" != "" ]; then
 		replace_pattern "${CONFIG_SUFFIX}" "CONFIG_SUFFIX" "$2"
 	fi
 
@@ -1841,7 +1828,7 @@ import_data_template() {
 
 	# Prepare template for replacement
 	DATA_TEMPLATE_PATH="${CLI_CONF_FILE%/*}/${DATA_TEMPLATE_FILE}"
-	if [ -f ${DATA_TEMPLATE_PATH} ]
+	if [ -f "${DATA_TEMPLATE_PATH}" ]
 	then
 		message "info" "[INFO] Using ${DATA_TEMPLATE_PATH} as template"
 	else
@@ -1850,9 +1837,9 @@ import_data_template() {
 	fi
 
 	DATA_FILE_PATH="${DATA_TEMPLATE_PATH%.ldif}-filled.ldif"
-	cp -f ${DATA_TEMPLATE_PATH} ${DATA_FILE_PATH}
-	chown $SLAPD_USER:$SLAPD_GROUP ${DATA_FILE_PATH}
-	chmod 640 ${DATA_FILE_PATH}
+	cp -f "${DATA_TEMPLATE_PATH}" "${DATA_FILE_PATH}"
+	chown "$SLAPD_USER":"$SLAPD_GROUP" "${DATA_FILE_PATH}"
+	chmod 640 "${DATA_FILE_PATH}"
 
 
 	# Add new admins
@@ -1866,7 +1853,7 @@ import_data_template() {
 		eval DATA_ADMIN_MAIL="\$DATA_ADMIN_${DATA_ADMIN}_MAIL"
 
 		if [ "${DATA_ADMIN_PW}" != "" ] ; then
-			DATA_ADMIN_PW_HASH="$( compute_hash ${DATA_ADMIN_PW} )"
+			DATA_ADMIN_PW_HASH="$( compute_hash "${DATA_ADMIN_PW}" )"
 		fi
 
 		if [ "${DATA_ADMIN_DN}" != "" ] && [ "${DATA_ADMIN_PW_HASH}" != "" ] && [ "${DATA_ADMIN_UID}" != "" ] && [ "${DATA_ADMIN_SN}" != "" ] && [ "${DATA_ADMIN_GN}" != "" ] && [ "${DATA_ADMIN_MAIL}" != "" ] ; then
@@ -1884,7 +1871,7 @@ sn: ${DATA_ADMIN_SN}
 uid: ${DATA_ADMIN_UID}
 userPassword: ${DATA_ADMIN_PW_HASH}
 pwdPolicySubentry: cn=admin-policy,ou=ppolicies,DATA_SUFFIX
-memberOf: cn=admin,ou=groups,DATA_SUFFIX" >> ${DATA_FILE_PATH}
+memberOf: cn=admin,ou=groups,DATA_SUFFIX" >> "${DATA_FILE_PATH}"
 
 			MEMBER="member: ${DATA_ADMIN_DN}
 ${MEMBER}"
@@ -1902,9 +1889,9 @@ ${MEMBER}"
 
 
 	# create new organizations and add people and groups branches inside
-	if [ ! -z ${DATA_ORGANIZATIONS+x} ] ; then
+	if [ -n "${DATA_ORGANIZATIONS+x}" ] ; then
 		ORGS=${DATA_ORGANIZATIONS}, # adds final separator
-		while [ ${ORGS} ]; do
+		while [ "${ORGS}" ]; do
 			o="${ORGS%%,*}" # get current organization
 			message "info" "[INFO] Adding organization ${o}"
 			printf "\n%s" "
@@ -1921,7 +1908,7 @@ ou: people
 dn: ou=groups,ou=${o},${DATA_SUFFIX}
 objectClass: organizationalUnit
 objectClass: top
-ou: groups" >> ${DATA_FILE_PATH}
+ou: groups" >> "${DATA_FILE_PATH}"
 
 			if [[ -n $MEMBER ]]
 			then
@@ -1930,12 +1917,12 @@ dn: cn=admin,ou=groups,ou=${o},${DATA_SUFFIX}
 objectClass: groupOfNames
 objectClass: top
 cn: admin
-$MEMBER" >> ${DATA_FILE_PATH}
+$MEMBER" >> "${DATA_FILE_PATH}"
 
 				# Add corresponding memberOf
 				for DATA_ADMIN in ${DATA_ADMINS}; do
 					eval DATA_ADMIN_DN="\$DATA_ADMIN_${DATA_ADMIN}_DN"
-					sed -i -e "/^dn: ${DATA_ADMIN_DN}/amemberOf: cn=admin,ou=groups,ou=${o},${DATA_SUFFIX}" ${DATA_FILE_PATH}
+					sed -i -e "/^dn: ${DATA_ADMIN_DN}/amemberOf: cn=admin,ou=groups,ou=${o},${DATA_SUFFIX}" "${DATA_FILE_PATH}"
 				done
 			else
 				message 'warning' "[WARNING] Can't create dn: cn=admin,ou=groups,ou=${o},${DATA_SUFFIX} since there is no member to add in"
@@ -1955,7 +1942,7 @@ dn: cn=admin,ou=groups,DATA_SUFFIX
 objectClass: groupOfNames
 objectClass: top
 cn: admin
-$MEMBER" >> ${DATA_FILE_PATH}
+$MEMBER" >> "${DATA_FILE_PATH}"
 
 
 	# Add new users
@@ -1969,7 +1956,7 @@ $MEMBER" >> ${DATA_FILE_PATH}
 		eval DATA_USER_MAIL="\$DATA_USER_${DATA_USER}_MAIL"
 
 		if [ "${DATA_USER_PW}" != "" ] ; then
-			DATA_USER_PW_HASH="$( compute_hash ${DATA_USER_PW} )"
+			DATA_USER_PW_HASH="$( compute_hash "${DATA_USER_PW}" )"
 		fi
 
 		if [ "${DATA_USER_DN}" != "" ] && [ "${DATA_USER_PW_HASH}" != "" ] && [ "${DATA_USER_UID}" != "" ] && [ "${DATA_USER_SN}" != "" ] && [ "${DATA_USER_GN}" != "" ] && [ "${DATA_USER_MAIL}" != "" ] ; then
@@ -1985,7 +1972,7 @@ givenName: ${DATA_USER_GN}
 mail: ${DATA_USER_MAIL}
 sn: ${DATA_USER_SN}
 uid: ${DATA_USER_UID}
-userPassword: ${DATA_USER_PW_HASH}" >> ${DATA_FILE_PATH}
+userPassword: ${DATA_USER_PW_HASH}" >> "${DATA_FILE_PATH}"
 
 		else
 			collect_missing=''
@@ -2003,7 +1990,7 @@ userPassword: ${DATA_USER_PW_HASH}" >> ${DATA_FILE_PATH}
 	# Adapt LDAP suffix
 	message "info" "[INFO] Using suffix ${DATA_SUFFIX}"
 	replace_pattern "DATA_SUFFIX" "${DATA_SUFFIX}" "${DATA_FILE_PATH}"
-	if [ ! -z ${DATA_SUFFIX+x} ] ; then
+	if [ -n "${DATA_SUFFIX+x}" ] ; then
 		DATA_RDNSUFFIX=${DATA_SUFFIX#*=} # remove dc= (front of DN)
 		DATA_RDNSUFFIX=${DATA_RDNSUFFIX%%,*} # remove suffix (back of DN)
 		replace_pattern "DATA_RDNSUFFIX" "${DATA_RDNSUFFIX}" "${DATA_FILE_PATH}"
@@ -2011,13 +1998,13 @@ userPassword: ${DATA_USER_PW_HASH}" >> ${DATA_FILE_PATH}
 	replace_pattern "DATA_ORGANIZATION" "${DATA_ORGANIZATION}" "${DATA_FILE_PATH}"
 
 	# Adapt serviceaccount DN, RDN and password
-	if [ ! -z ${DATA_SERVICEACCOUNT_DN+x} ] ; then
+	if [ -n "${DATA_SERVICEACCOUNT_DN+x}" ] ; then
 		DATA_SERVICEACCOUNT_RDN=${DATA_SERVICEACCOUNT_DN#*=} # remove cn= (front of DN)
 		DATA_SERVICEACCOUNT_RDN=${DATA_SERVICEACCOUNT_RDN%%,*} # remove suffix (back of DN)
 		message "info" "[INFO] Adding service account ${DATA_SERVICEACCOUNT_RDN}"
 		replace_pattern "DATA_SERVICEACCOUNT_RDN" "${DATA_SERVICEACCOUNT_RDN}" "${DATA_FILE_PATH}"
 		replace_pattern "DATA_SERVICEACCOUNT_DN" "${DATA_SERVICEACCOUNT_DN}" "${DATA_FILE_PATH}"
-		replace_pattern "DATA_SERVICEACCOUNT_PW" "$( compute_hash ${DATA_SERVICEACCOUNT_PW} )" "${DATA_FILE_PATH}"
+		replace_pattern "DATA_SERVICEACCOUNT_PW" "$( compute_hash "${DATA_SERVICEACCOUNT_PW}" )" "${DATA_FILE_PATH}"
 	fi
 
 
@@ -2040,7 +2027,7 @@ userPassword: ${DATA_USER_PW_HASH}" >> ${DATA_FILE_PATH}
 		get_confvalues "directory"
 		dbdirs=$RETVAL
 
-		if [ -z "$dbdirs" -o -z "$dbsufs" ]
+		if [ -z "$dbdirs" ] || [ -z "$dbsufs" ]
 		then
 			message "alert" "[ALERT] No database directories found"
 			exit 1
@@ -2050,14 +2037,14 @@ userPassword: ${DATA_USER_PW_HASH}" >> ${DATA_FILE_PATH}
 	i=1
 	dbdir=""
 	for suf in $dbsufs ; do
-		sufprint=$( echo $suf | sed "s/#20/ /" )
+		sufprint=$( echo "$suf" | sed "s/#20/ /" )
 		if [ "$sufprint" = "${DATA_SUFFIX}" ] ; then
-			dbdir=$( echo $dbdirs | awk -v j="$i" 'BEGIN{OFS=" "} {print $j}' )
-			sufp=$( echo $suf | sed "s/#20/ /" )
+			dbdir=$( echo "$dbdirs" | awk -v j="$i" 'BEGIN{OFS=" "} {print $j}' )
+			sufp=$( echo "$suf" | sed "s/#20/ /" )
 		fi
-		i=$( expr $i + 1 )
+		i=$(( i + 1 ))
 	done
-	if [ -z $dbdir ]; then
+	if [ -z "$dbdir" ]; then
 		message "error" "[ERROR] No suffix configured for ${DATA_SUFFIX}"
 		exit 1
 	fi
@@ -2067,16 +2054,16 @@ userPassword: ${DATA_USER_PW_HASH}" >> ${DATA_FILE_PATH}
 	message "info" "[INFO] Delete data in $dbdir associated to suffix ${DATA_SUFFIX}"
 	if [ -z "$SU" ]
 	then
-		rm -rf "$dbdir/"*
+		rm -rf "${dbdir:?}/"*
 	else
-		$SU "rm -rf $dbdir/"*
+		$SU "rm -rf ${dbdir:?}/"*
 	fi
 
 	# Import backup
 	message "info" "[INFO] Importing data from ${DATA_FILE_PATH}"
 	if [ -z "$SU" ]
 	then
-		$SLAPADD_BIN -b "$sufp" $SLAPADD_PARAMS 2>/dev/null
+		$SLAPADD_BIN -b "$sufp" "$SLAPADD_PARAMS" 2>/dev/null
 	else
 		$SU "$SLAPADD_BIN -b \"$sufp\" $SLAPADD_PARAMS" 2>/dev/null
 	fi
@@ -2092,29 +2079,27 @@ userPassword: ${DATA_USER_PW_HASH}" >> ${DATA_FILE_PATH}
 }
 
 removeoldconfigbackups() {
-	if [ "x$BACKUP_CONFIG_DELETE_AFTER_DAYS" != "x" ]
+	if [ "$BACKUP_CONFIG_DELETE_AFTER_DAYS" != "" ]
 	then
 		message "info" "[INFO] Removing config backup files older than $BACKUP_CONFIG_DELETE_AFTER_DAYS days"
-		find $BACKUP_PATH -type f -name 'config-*' -mtime +$BACKUP_CONFIG_DELETE_AFTER_DAYS -delete -print
+		find $BACKUP_PATH -type f -name 'config-*' -mtime +"$BACKUP_CONFIG_DELETE_AFTER_DAYS" -delete -print
 	fi
 }
 
 removeolddatabackups() {
-	if [ "x$BACKUP_DATA_DELETE_AFTER_DAYS" != "x" ]
+	if [ "$BACKUP_DATA_DELETE_AFTER_DAYS" != "" ]
 	then
 		message "info" "[INFO] Removing data backup files older than $BACKUP_DATA_DELETE_AFTER_DAYS days"
-		find $BACKUP_PATH -type f ! -name 'config-*' -mtime +$BACKUP_DATA_DELETE_AFTER_DAYS -delete -print
+		find $BACKUP_PATH -type f ! -name 'config-*' -mtime +"$BACKUP_DATA_DELETE_AFTER_DAYS" -delete -print
 	fi
 }
 
 overwrite_config_from_flat_file() {
-	if [ "x${CONVERT_CONF_AT_STARTUP}" != "x" -a ! -z "${SLAPD_CONF}" -a ! -z "${SLAPD_CONF_DIR}" ]
+	if [ "${CONVERT_CONF_AT_STARTUP}" != "" ] && [ -n "${SLAPD_CONF}" ] && [ -n "${SLAPD_CONF_DIR}" ]
 	then
 
 		# Test slapd.conf
-		${SLAPTEST_BIN} -u -f ${SLAPD_CONF} > /dev/null 2>&1
-
-		if [ $? -eq 0 ]
+		if ${SLAPTEST_BIN} -u -f ${SLAPD_CONF} > /dev/null 2>&1
 		then
 
 			message "info" "[INFO] regenerate cn=config from ${SLAPD_CONF}"
@@ -2122,15 +2107,15 @@ overwrite_config_from_flat_file() {
 			# Delete current cn=config content
 			if [ -z "${SU}" ]
 			then
-				rm -rf "${SLAPD_CONF_DIR}/"*
+				rm -rf "${SLAPD_CONF_DIR:?}/"*
 			else
-				${SU} "rm -rf ${SLAPD_CONF_DIR}/"*
+				${SU} "rm -rf ${SLAPD_CONF_DIR:?}/"*
 			fi
 
 			# Convert configuration
 			if [ -z "${SU}" ]
 			then
-				${SLAPTEST_BIN} -f ${SLAPD_CONF} -F ${SLAPD_CONF_DIR}
+				${SLAPTEST_BIN} -f ${SLAPD_CONF} -F "${SLAPD_CONF_DIR}"
 			else
 				${SU} "${SLAPTEST_BIN} -f ${SLAPD_CONF} -F ${SLAPD_CONF_DIR}"
 			fi
@@ -2253,12 +2238,12 @@ case $1 in
 
 	convertconfig)
 		shift
-		convert_config $*
+		convert_config "$*"
 		;;
 
 	buildconfigtemplate)
 		shift
-		build_config_template $*
+		build_config_template "$*"
 		;;
 
 	importdatatemplate)
