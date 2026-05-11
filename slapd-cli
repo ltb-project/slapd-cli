@@ -1167,9 +1167,9 @@ restore() {
 				# Delete current data
 				if [ -z "$SU" ]
 				then
-					rm -rf "$dbdir/"*
+					rm -rf "${dbdir:?}/"*
 				else
-					$SU "rm -rf $dbdir/"*
+					$SU "rm -rf ${dbdir:?}/"*
 				fi
 
 				# Import backup
@@ -1229,9 +1229,9 @@ restoreconfig() {
 			# Delete current data
 			if [ -z "$SU" ]
 			then
-				rm -rf "$SLAPD_CONF_DIR/"*
+				rm -rf "${SLAPD_CONF_DIR:?}/"*
 			else
-				$SU "rm -rf $SLAPD_CONF_DIR/"*
+				$SU "rm -rf ${SLAPD_CONF_DIR:?}/"*
 			fi
 
 			# Import backup
@@ -1654,9 +1654,9 @@ import_ldif_config_template() {
 	message "info" "[INFO] Delete configuration data in ${SLAPD_CONF_DIR}"
 	if [ -z "$SU" ]
 	then
-		rm -rf "${SLAPD_CONF_DIR}/"*
+		rm -rf "${SLAPD_CONF_DIR:?}/"*
 	else
-		$SU "rm -rf ${SLAPD_CONF_DIR}/"*
+		$SU "rm -rf ${SLAPD_CONF_DIR:?}/"*
 	fi
 
 	# Import backup
@@ -2067,9 +2067,9 @@ userPassword: ${DATA_USER_PW_HASH}" >> "${DATA_FILE_PATH}"
 	message "info" "[INFO] Delete data in $dbdir associated to suffix ${DATA_SUFFIX}"
 	if [ -z "$SU" ]
 	then
-		rm -rf "$dbdir/"*
+		rm -rf "${dbdir:?}/"*
 	else
-		$SU "rm -rf $dbdir/"*
+		$SU "rm -rf ${dbdir:?}/"*
 	fi
 
 	# Import backup
@@ -2122,9 +2122,9 @@ overwrite_config_from_flat_file() {
 			# Delete current cn=config content
 			if [ -z "${SU}" ]
 			then
-				rm -rf "${SLAPD_CONF_DIR}/"*
+				rm -rf "${SLAPD_CONF_DIR:?}/"*
 			else
-				${SU} "rm -rf ${SLAPD_CONF_DIR}/"*
+				${SU} "rm -rf ${SLAPD_CONF_DIR:?}/"*
 			fi
 
 			# Convert configuration
