@@ -377,9 +377,7 @@ start_slapd() {
 
 	# Exit 0 if slapd is already running
 	# LSB compliance
-	slapd_status
-
-	if [ $? -eq 0 ]
+	if slapd_status
 	then
 		message "info" "[OK] OpenLDAP is already running"
 		exit 0
@@ -391,8 +389,7 @@ start_slapd() {
 	# File descriptor limit, only for root
 	if [ "$MYUID" -eq 0 ]
 	then
-		ulimit -n $FD_LIMIT
-		if [ $? -eq 0 ]
+		if ulimit -n $FD_LIMIT
 		then
 			message "info" "[OK] File descriptor limit set to $FD_LIMIT"
 		else
@@ -528,9 +525,7 @@ start_lload() {
 
 	# Exit 0 if lload is already running
 	# LSB compliance
-	lload_status
-
-	if [ $? -eq 0 ]
+	if lload_status
 	then
 		message "info" "[OK] lload is already running"
 		exit 0
@@ -542,8 +537,7 @@ start_lload() {
 	# File descriptor limit, only for root
 	if [ "$MYUID" -eq 0 ]
 	then
-		ulimit -n $FD_LIMIT
-		if [ $? -eq 0 ]
+		if ulimit -n $FD_LIMIT
 		then
 			message "info" "[OK] File descriptor limit set to $FD_LIMIT"
 		else
@@ -742,9 +736,7 @@ forcestop() {
 			message "info" "[INFO] Found no OpenLDAP process running with $SLAPD_SERVICES"
 		else
 			# Try a killall
-			/usr/bin/killall -KILL $SLAPD_BIN
-
-			if [ $? -eq 0 ]
+			if /usr/bin/killall -KILL $SLAPD_BIN
 			then
 				message "info" "[OK] All OpenLDAP process killed with force"
 			else
@@ -758,9 +750,7 @@ forcestop() {
 			message "info" "[OK] OpenLDAP already stopped"
 			exit 0
 		fi
-		kill -KILL "$PID"
-
-		if [ $? -eq 0 ]
+		if kill -KILL "$PID"
 		then
 			message "info" "[OK] OpenLDAP process killed with force (PID $PID)"
 		else
@@ -909,9 +899,7 @@ configtest() {
 	fi
 
 	# slaptest
-	$SLAPTEST_BIN "$SLAPTEST_PARAMS" > /dev/null 2>&1
-
-	if [ $? -eq 0 ]
+	if $SLAPTEST_BIN "$SLAPTEST_PARAMS" > /dev/null 2>&1
 	then
 		message "info" "[OK] OpenLDAP configuration test successful"
 	else
@@ -1468,8 +1456,8 @@ check_sync() {
 					# get corresponding local slave contextCSN
 					matchingLocalContextCSN=$( echo -e "$localContextCSN" | grep "$SID" )
 					# Check if corresponding local slave contextCSN is identical to remote provider contextCSN
-					compare_CSN "${matchingLocalContextCSN}" "${CSN}"
-					if [[ "$?" -eq "0" ]]; then
+					if compare_CSN "${matchingLocalContextCSN}" "${CSN}"
+					then
 						echo "    INFO: remote ($CSN) and local ($matchingLocalContextCSN) contextCSN found and synchronized"
 					else
 						echo "    ERROR: remote ($CSN) and local ($matchingLocalContextCSN) contextCSN found, but not synchronized!"
@@ -1697,17 +1685,16 @@ convert_config() {
 
 	# import configuration into the temporary configuration directory
 	SLAPTEST_PARAMS=" -n0 -F ${TMP_CONF_DIR} -f ${1}"
-	$SLAPTEST_BIN "$SLAPTEST_PARAMS" > /dev/null 2>&1
-
-	if [ $? -ne 0 ] ; then
+	if ! $SLAPTEST_BIN "$SLAPTEST_PARAMS" > /dev/null 2>&1
+	then
 		message "alert" "[ALERT] conversion failed during import"
 		rm -rf "${TMP_CONF_DIR}"
 		exit 4
 	fi
 
 	# export configuration in ldif
-	$SLAPCAT_BIN "$SLAPCAT_PARAMS" -n0 -F "${TMP_CONF_DIR}" -l "$2" 2>/dev/null
-	if [ $? -ne 0 ] ; then
+	if ! $SLAPCAT_BIN "$SLAPCAT_PARAMS" -n0 -F "${TMP_CONF_DIR}" -l "$2" 2>/dev/null
+	then
 		message "alert" "[ALERT] conversion failed during export"
 		rm -rf "${TMP_CONF_DIR}"
 		exit 5
@@ -2112,9 +2099,7 @@ overwrite_config_from_flat_file() {
 	then
 
 		# Test slapd.conf
-		${SLAPTEST_BIN} -u -f ${SLAPD_CONF} > /dev/null 2>&1
-
-		if [ $? -eq 0 ]
+		if ${SLAPTEST_BIN} -u -f ${SLAPD_CONF} > /dev/null 2>&1
 		then
 
 			message "info" "[INFO] regenerate cn=config from ${SLAPD_CONF}"
