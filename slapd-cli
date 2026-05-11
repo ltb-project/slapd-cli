@@ -2092,7 +2092,7 @@ userPassword: ${DATA_USER_PW_HASH}" >> "${DATA_FILE_PATH}"
 }
 
 removeoldconfigbackups() {
-	if [ "x$BACKUP_CONFIG_DELETE_AFTER_DAYS" != "x" ]
+	if [ "$BACKUP_CONFIG_DELETE_AFTER_DAYS" != "" ]
 	then
 		message "info" "[INFO] Removing config backup files older than $BACKUP_CONFIG_DELETE_AFTER_DAYS days"
 		find $BACKUP_PATH -type f -name 'config-*' -mtime +"$BACKUP_CONFIG_DELETE_AFTER_DAYS" -delete -print
@@ -2100,7 +2100,7 @@ removeoldconfigbackups() {
 }
 
 removeolddatabackups() {
-	if [ "x$BACKUP_DATA_DELETE_AFTER_DAYS" != "x" ]
+	if [ "$BACKUP_DATA_DELETE_AFTER_DAYS" != "" ]
 	then
 		message "info" "[INFO] Removing data backup files older than $BACKUP_DATA_DELETE_AFTER_DAYS days"
 		find $BACKUP_PATH -type f ! -name 'config-*' -mtime +"$BACKUP_DATA_DELETE_AFTER_DAYS" -delete -print
@@ -2108,7 +2108,7 @@ removeolddatabackups() {
 }
 
 overwrite_config_from_flat_file() {
-	if [ "x${CONVERT_CONF_AT_STARTUP}" != "x" ] && [ -n "${SLAPD_CONF}" ] && [ -n "${SLAPD_CONF_DIR}" ]
+	if [ "${CONVERT_CONF_AT_STARTUP}" != "" ] && [ -n "${SLAPD_CONF}" ] && [ -n "${SLAPD_CONF_DIR}" ]
 	then
 
 		# Test slapd.conf
