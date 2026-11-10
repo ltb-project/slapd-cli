@@ -33,7 +33,7 @@
 #====================================================================
 # Version
 #====================================================================
-VERSION="3.7"
+VERSION="3.8"
 
 #====================================================================
 # CLI configuration file, for overloading every variable below
@@ -150,6 +150,18 @@ get_confvalues() {
 	;;
 	suffix)
 		backconfig_get_values "olcSuffix" "(|(objectclass=olcBdbConfig)(objectclass=olcHdbConfig)(objectclass=olcMdbConfig))"
+	;;
+	TLSCertificateFile)
+		backconfig_get_values "olcTLSCertificateFile"
+	;;
+	TLSCertificateKeyFile)
+		backconfig_get_values "olcTLSCertificateKeyFile"
+	;;
+	TLSCACertificateFile)
+		backconfig_get_values "olcTLSCACertificateFile"
+	;;
+	TLSCACertificatePath)
+		backconfig_get_values "olcTLSCACertificatePath"
 	;;
 	*)
 		RETVAL=""
@@ -1410,21 +1422,60 @@ check_sync() {
 			PCERT=$RETVAL
 			syncrepl_get_value "${PROV}" "tls_key"
 			PKEY=$RETVAL
+			syncrepl_get_value "${PROV}" "bindmethod"
+			PBINDMETHOD=$RETVAL
+			syncrepl_get_value "${PROV}" "saslmech"
+			PSASLMECH=$RETVAL
 			echo "Checking contextCSN for suffix ${SUFFIX} on remote host ${PHOST}"
 			# Get remote provider contextCSN (one contextCSN per line)
 			# Certificate authentication
-			if [[ ! -z "$PCERT" ]] && [[ ! -z "$PKEY" ]] ; then
-				if [[ ! -z "$PCACERTDIR" ]]; then
-					CERTVARS='LDAPTLS_CACERTDIR="${PCACERTDIR}" LDAPTLS_CERT="${PCERT}" LDAPTLS_KEY="${PKEY}" LDAPTLS_REQCERT="try"'
-				else
-					CERTVARS='LDAPTLS_CACERT="${PCACERT}" LDAPTLS_CERT="${PCERT}" LDAPTLS_KEY="${PKEY}" LDAPTLS_REQCERT="try"'
+			# Fallback to default certificate if not specified in syncrepl config
+			if [[ "${PSASLMECH^^}" == "EXTERNAL" ]] && [[ "${PBINDMETHOD^^}" == "SASL" ]]; then
+				if [[ -z "$PCERT" ]]; then
+					get_confvalues "TLSCertificateFile"
+					PCERT=$RETVAL
 				fi
+				if [[ -z "$PKEY" ]]; then
+					get_confvalues "TLSCertificateKeyFile"
+					PKEY=$RETVAL
+				fi
+				if [[ ! -z "$PCACERT" ]]; then
+					CERTCAVAR="LDAPTLS_CACERT=\"${PCACERT}\""
+				else
+					if [[ ! -z "$PCACERTDIR" ]]; then
+						CERTCAVAR="LDAPTLS_CACERTDIR=\"${PCACERTDIR}\""
+					else
+						get_confvalues "TLSCACertificateFile"
+						PCACERT=$RETVAL
+
+						if [[ ! -z "$PCACERT" ]]; then
+							CERTCAVAR="LDAPTLS_CACERT=\"${PCACERT}\""
+						else
+							get_confvalues "TLSCACertificatePath"
+							PCACERTDIR=$RETVAL
+							if [[ ! -z "$PCACERTDIR" ]]; then
+								CERTCAVAR="LDAPTLS_CACERTDIR=\"${PCACERTDIR}\""
+							else
+								error "Unable to find CA_CERT or CA_CERT_DIR for certificate authenticated sync"
+							fi
+						fi
+					fi
+				fi
+
+				CERTVARS="${CERTCAVAR} LDAPTLS_CERT=\"${PCERT}\" LDAPTLS_KEY=\"${PKEY}\" LDAPTLS_REQCERT=\"try\""
+				echo "... using TLS auth"
+				echo ""
+				for p in ${CERTVARS}; do echo "$p"; done
+				echo ""
 				CONTEXTCSN=$(eval "${CERTVARS}" ${LDAPSEARCH_BIN} -Y EXTERNAL -H "${PHOST}" -b "${PBASEDN}" -o nettimeout=5 -s base ${LDAPSEARCH_PARAMS} contextCSN -LLL 2>/dev/null )
+
 			# If bindDN is empty, try anonymous bind
 			elif [ -z "$PBINDDN" ]; then
+				echo "... using anonymous auth"
 				CONTEXTCSN=$( ${LDAPSEARCH_BIN} -x -H "${PHOST}" -b "${PBASEDN}" -o nettimeout=5 -s base ${LDAPSEARCH_PARAMS} contextCSN -LLL 2>/dev/null )
 			# Password authentication (default)
 			else
+				echo "... using password auth"
 				CONTEXTCSN=$( ${LDAPSEARCH_BIN} -x -H "${PHOST}" -D "${PBINDDN}" -w "${PBINDPW}" -b "${PBASEDN}" -o nettimeout=5 -s base ${LDAPSEARCH_PARAMS} contextCSN -LLL 2>/dev/null )
 			fi
 
